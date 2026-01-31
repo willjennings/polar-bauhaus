@@ -6,162 +6,157 @@
 (function() {
   'use strict';
 
-  const WIDTH = 500;
-  const HEIGHT = 500;
-  const CLOCK_CENTER_X = 250;
-  const CLOCK_CENTER_Y = 250;
+  // Canvas dimensions - 2:1 aspect ratio for world map
+  const WIDTH = 800;
+  const HEIGHT = 400;
+  const CLOCK_CENTER_X = WIDTH / 2;
+  const CLOCK_CENTER_Y = HEIGHT / 2;
   const TARGET_FPS = 30;
   const FRAME_TIME = 1000 / TARGET_FPS;
 
   // Accessibility: WCAG 2.1 recommends minimum 44x44px touch targets
   const TOUCH_TARGET_RADIUS = 22;
-  const CITY_FONT_SIZE = 18;
+  const CITY_FONT_SIZE = 14;
 
-  // Clock ring sizes - adjusted for overlay on map
+  // Clock ring sizes - adjusted for wider canvas
   const RINGS = {
-    day: 480,
-    hour: 360,
-    minute: 240,
-    second: 120
+    day: 380,
+    hour: 280,
+    minute: 180,
+    second: 80
   };
 
   // Seasonal color palettes (HSB hues)
-  // Each season has: day, hour, minute, second ring colors
   const SEASONS = {
     spring: {
       name: 'Spring',
-      day: 150,      // Fresh green
-      hour: 330,     // Cherry blossom pink
-      minute: 270,   // Lavender
-      second: 45,    // Warm yellow
+      day: 150,
+      hour: 330,
+      minute: 270,
+      second: 45,
       saturation: 70,
-      bgTint: 'rgba(144, 238, 144, 0.1)' // Light green tint
+      bgTint: 'rgba(144, 238, 144, 0.1)'
     },
     summer: {
       name: 'Summer',
-      day: 45,       // Golden orange
-      hour: 60,      // Bright yellow
-      minute: 190,   // Ocean cyan
-      second: 0,     // Vibrant red
+      day: 45,
+      hour: 60,
+      minute: 190,
+      second: 0,
       saturation: 90,
-      bgTint: 'rgba(255, 223, 128, 0.1)' // Warm golden tint
+      bgTint: 'rgba(255, 223, 128, 0.1)'
     },
     fall: {
       name: 'Fall',
-      day: 25,       // Burnt orange
-      hour: 40,      // Amber gold
-      minute: 280,   // Deep purple
-      second: 350,   // Crimson
+      day: 25,
+      hour: 40,
+      minute: 280,
+      second: 350,
       saturation: 85,
-      bgTint: 'rgba(205, 133, 63, 0.1)' // Warm brown tint
+      bgTint: 'rgba(205, 133, 63, 0.1)'
     },
     winter: {
       name: 'Winter',
-      day: 200,      // Ice blue
-      hour: 220,     // Steel blue
-      minute: 260,   // Violet
-      second: 180,   // Teal
+      day: 200,
+      hour: 220,
+      minute: 260,
+      second: 180,
       saturation: 50,
-      bgTint: 'rgba(176, 224, 230, 0.1)' // Cool blue tint
+      bgTint: 'rgba(176, 224, 230, 0.1)'
     }
   };
 
-  // Timezone ranges (x-coordinate ranges mapped to timezone offsets)
+  // Timezone ranges scaled for 800px width
   const TIMEZONE_RANGES = [
-    { min: 0, max: 16, offset: 18 },    // GMT-11
-    { min: 16, max: 24, offset: 19 },   // GMT-10
-    { min: 24, max: 60, offset: 20 },   // GMT-9
-    { min: 60, max: 83, offset: 21 },   // GMT-8
-    { min: 83, max: 90, offset: 22 },   // GMT-7
-    { min: 90, max: 120, offset: 23 },  // GMT-6
-    { min: 120, max: 139, offset: 0 },  // GMT-5 (Eastern)
-    { min: 139, max: 160, offset: 1 },  // GMT-4
-    { min: 160, max: 189, offset: 2 },  // GMT-3
-    { min: 189, max: 190, offset: 3 },  // GMT-2
-    { min: 190, max: 208, offset: 4 },  // GMT-1
-    { min: 208, max: 232, offset: 5 },  // GMT(0)
-    { min: 232, max: 260, offset: 6 },  // GMT+1
-    { min: 260, max: 274, offset: 7 },  // GMT+2
-    { min: 274, max: 309, offset: 8 },  // GMT+3
-    { min: 309, max: 320, offset: 9 },  // GMT+4
-    { min: 320, max: 330, offset: 10 }, // GMT+5
-    { min: 330, max: 350, offset: 11 }, // GMT+6
-    { min: 350, max: 410, offset: 12 }, // GMT+7
-    { min: 410, max: 440, offset: 13 }, // GMT+8
-    { min: 440, max: 450, offset: 14 }, // GMT+9
-    { min: 450, max: 460, offset: 15 }, // GMT+10
-    { min: 460, max: 470, offset: 16 }, // GMT+11
-    { min: 470, max: 500, offset: 17 }  // GMT+12
+    { min: 0, max: 33, offset: 18 },     // GMT-11
+    { min: 33, max: 67, offset: 19 },    // GMT-10
+    { min: 67, max: 100, offset: 20 },   // GMT-9
+    { min: 100, max: 133, offset: 21 },  // GMT-8
+    { min: 133, max: 167, offset: 22 },  // GMT-7
+    { min: 167, max: 200, offset: 23 },  // GMT-6
+    { min: 200, max: 233, offset: 0 },   // GMT-5 (Eastern)
+    { min: 233, max: 267, offset: 1 },   // GMT-4
+    { min: 267, max: 300, offset: 2 },   // GMT-3
+    { min: 300, max: 333, offset: 3 },   // GMT-2
+    { min: 333, max: 367, offset: 4 },   // GMT-1
+    { min: 367, max: 400, offset: 5 },   // GMT(0)
+    { min: 400, max: 433, offset: 6 },   // GMT+1
+    { min: 433, max: 467, offset: 7 },   // GMT+2
+    { min: 467, max: 500, offset: 8 },   // GMT+3
+    { min: 500, max: 533, offset: 9 },   // GMT+4
+    { min: 533, max: 567, offset: 10 },  // GMT+5
+    { min: 567, max: 600, offset: 11 },  // GMT+6
+    { min: 600, max: 633, offset: 12 },  // GMT+7
+    { min: 633, max: 667, offset: 13 },  // GMT+8
+    { min: 667, max: 700, offset: 14 },  // GMT+9
+    { min: 700, max: 733, offset: 15 },  // GMT+10
+    { min: 733, max: 767, offset: 16 },  // GMT+11
+    { min: 767, max: 800, offset: 17 }   // GMT+12
   ];
 
-  // City data - coordinates transformed for 500x500 canvas
-  // Original: map at (-15, 510) size (500, 250)
-  // New: map at (0, 0) size (500, 500)
-  // Transform: new_x = old_x + 15, new_y = (old_y - 510) * 2
+  // City data with real geographic coordinates converted to canvas positions
+  // Formula: x = (longitude + 180) / 360 * WIDTH, y = (90 - latitude) / 180 * HEIGHT
   const CITIES = [
-    { name: "Anchorage", x: 42, y: 46, tz: -9 },
-    { name: "Los Angeles", x: 83, y: 122, tz: -8 },
-    { name: "Salt Lake City", x: 90, y: 104, tz: -7 },
-    { name: "Mexico City", x: 112, y: 172, tz: -6 },
-    { name: "Dallas", x: 114, y: 136, tz: -6 },
-    { name: "Chicago", x: 130, y: 98, tz: -6 },
-    { name: "Santiago", x: 151, y: 346, tz: -3 },
-    { name: "Buenos Aires", x: 171, y: 344, tz: -3 },
-    { name: "Bogota", x: 149, y: 226, tz: -5 },
-    { name: "Caracas", x: 154, y: 204, tz: -4 },
-    { name: "Ottawa", x: 143, y: 92, tz: -5 },
-    { name: "New York", x: 147, y: 114, tz: -5 },
-    { name: "Brasilia", x: 180, y: 286, tz: -3 },
-    { name: "Halifax", x: 172, y: 84, tz: -4 },
-    { name: "Nuuk", x: 180, y: 32, tz: -3 },
-    { name: "Reykjavik", x: 225, y: 36, tz: 0 },
-    { name: "London", x: 247, y: 72, tz: 0 },
-    { name: "Barcelona", x: 246, y: 106, tz: 1 },
-    { name: "Dakar", x: 225, y: 188, tz: 0 },
-    { name: "Paris", x: 257, y: 86, tz: 1 },
-    { name: "Rome", x: 273, y: 108, tz: 1 },
-    { name: "Berlin", x: 268, y: 70, tz: 1 },
-    { name: "Minsk", x: 287, y: 68, tz: 3 },
-    { name: "Warsaw", x: 280, y: 72, tz: 1 },
-    { name: "Moscow", x: 299, y: 64, tz: 3 },
-    { name: "Athens", x: 285, y: 112, tz: 2 },
-    { name: "Tehran", x: 324, y: 122, tz: 3.5 },
-    { name: "Dubai", x: 322, y: 156, tz: 4 },
-    { name: "Astana", x: 344, y: 76, tz: 6 },
-    { name: "Mumbai", x: 351, y: 166, tz: 5.5 },
-    { name: "Dhaka", x: 374, y: 162, tz: 6 },
-    { name: "Bangkok", x: 391, y: 198, tz: 7 },
-    { name: "Jakarta", x: 398, y: 254, tz: 7 },
-    { name: "Beijing", x: 412, y: 116, tz: 8 },
-    { name: "Tokyo", x: 444, y: 122, tz: 9 },
-    { name: "Port Moresby", x: 450, y: 258, tz: 10 },
-    { name: "Brisbane", x: 462, y: 326, tz: 10 },
-    { name: "Wellington", x: 490, y: 368, tz: 12 },
-    { name: "Magadan", x: 495, y: 38, tz: 11 },
-    { name: "Port Elizabeth", x: 288, y: 342, tz: 2 },
-    { name: "Walvis Bay", x: 271, y: 306, tz: 2 },
-    { name: "Luanda", x: 271, y: 262, tz: 1 },
-    { name: "Abuja", x: 262, y: 210, tz: 1 },
-    { name: "Djibouti", x: 308, y: 208, tz: 3 },
-    { name: "Cairo", x: 295, y: 138, tz: 2 },
-    { name: "Amman", x: 301, y: 130, tz: 3 },
-    { name: "Benghazi", x: 281, y: 136, tz: 2 },
-    { name: "Khartoum", x: 296, y: 184, tz: 2 },
-    { name: "Dar es Salaam", x: 303, y: 250, tz: 3 },
-    { name: "Antananarivo", x: 314, y: 296, tz: 3 }
+    { name: "Anchorage", x: 67, y: 64, tz: -9 },
+    { name: "Los Angeles", x: 137, y: 124, tz: -8 },
+    { name: "Salt Lake City", x: 151, y: 109, tz: -7 },
+    { name: "Mexico City", x: 180, y: 157, tz: -6 },
+    { name: "Dallas", x: 185, y: 127, tz: -6 },
+    { name: "Chicago", x: 205, y: 107, tz: -6 },
+    { name: "Santiago", x: 243, y: 274, tz: -3 },
+    { name: "Buenos Aires", x: 270, y: 277, tz: -3 },
+    { name: "Bogota", x: 235, y: 190, tz: -5 },
+    { name: "Caracas", x: 251, y: 177, tz: -4 },
+    { name: "Ottawa", x: 232, y: 99, tz: -5 },
+    { name: "New York", x: 236, y: 110, tz: -5 },
+    { name: "Brasilia", x: 294, y: 235, tz: -3 },
+    { name: "Halifax", x: 259, y: 101, tz: -4 },
+    { name: "Nuuk", x: 285, y: 57, tz: -3 },
+    { name: "Reykjavik", x: 351, y: 57, tz: 0 },
+    { name: "London", x: 400, y: 86, tz: 0 },
+    { name: "Barcelona", x: 405, y: 108, tz: 1 },
+    { name: "Dakar", x: 361, y: 167, tz: 0 },
+    { name: "Paris", x: 405, y: 91, tz: 1 },
+    { name: "Rome", x: 428, y: 107, tz: 1 },
+    { name: "Berlin", x: 430, y: 83, tz: 1 },
+    { name: "Minsk", x: 461, y: 80, tz: 3 },
+    { name: "Warsaw", x: 447, y: 84, tz: 1 },
+    { name: "Moscow", x: 484, y: 76, tz: 3 },
+    { name: "Athens", x: 453, y: 116, tz: 2 },
+    { name: "Tehran", x: 514, y: 121, tz: 3.5 },
+    { name: "Dubai", x: 523, y: 144, tz: 4 },
+    { name: "Astana", x: 559, y: 86, tz: 6 },
+    { name: "Mumbai", x: 562, y: 158, tz: 5.5 },
+    { name: "Dhaka", x: 601, y: 147, tz: 6 },
+    { name: "Bangkok", x: 623, y: 169, tz: 7 },
+    { name: "Jakarta", x: 637, y: 214, tz: 7 },
+    { name: "Beijing", x: 658, y: 111, tz: 8 },
+    { name: "Tokyo", x: 710, y: 121, tz: 9 },
+    { name: "Port Moresby", x: 727, y: 221, tz: 10 },
+    { name: "Brisbane", x: 740, y: 261, tz: 10 },
+    { name: "Wellington", x: 788, y: 292, tz: 12 },
+    { name: "Magadan", x: 735, y: 68, tz: 11 },
+    { name: "Port Elizabeth", x: 457, y: 276, tz: 2 },
+    { name: "Walvis Bay", x: 432, y: 251, tz: 2 },
+    { name: "Luanda", x: 429, y: 220, tz: 1 },
+    { name: "Abuja", x: 416, y: 180, tz: 1 },
+    { name: "Djibouti", x: 496, y: 174, tz: 3 },
+    { name: "Cairo", x: 469, y: 133, tz: 2 },
+    { name: "Amman", x: 480, y: 129, tz: 3 },
+    { name: "Benghazi", x: 445, y: 129, tz: 2 },
+    { name: "Khartoum", x: 472, y: 166, tz: 2 },
+    { name: "Dar es Salaam", x: 487, y: 215, tz: 3 },
+    { name: "Antananarivo", x: 506, y: 242, tz: 3 }
   ];
 
-  // Get user's timezone offset in hours (e.g., -5 for EST)
   function getUserTimezoneHours() {
     return -new Date().getTimezoneOffset() / 60;
   }
 
-  // Convert GMT offset to internal timezone offset (0-23 system)
   function gmtToInternalOffset(gmtHours) {
     return ((Math.round(gmtHours) + 5) % 24 + 24) % 24;
   }
 
-  // Find the closest city to user's timezone
   function findClosestCity(userTzHours) {
     let closest = CITIES[11]; // Default to New York
     let minDiff = Infinity;
@@ -176,13 +171,11 @@
     return closest;
   }
 
-  // Determine current season based on date (Northern Hemisphere)
   function getCurrentSeason() {
     const now = new Date();
-    const month = now.getMonth(); // 0-11
+    const month = now.getMonth();
     const day = now.getDate();
 
-    // Approximate equinox/solstice dates
     if ((month === 2 && day >= 20) || month === 3 || month === 4 || (month === 5 && day < 21)) {
       return SEASONS.spring;
     } else if ((month === 5 && day >= 21) || month === 6 || month === 7 || (month === 8 && day < 22)) {
@@ -199,18 +192,14 @@
       this.canvas = document.getElementById(canvasId);
       this.ctx = this.canvas.getContext('2d');
 
-      // Set canvas size
       this.canvas.width = WIDTH;
       this.canvas.height = HEIGHT;
 
-      // Get current season
       this.season = getCurrentSeason();
 
-      // Auto-detect user's timezone
       const userTzHours = getUserTimezoneHours();
       const defaultCity = findClosestCity(userTzHours);
 
-      // State - initialize with user's local timezone
       this.timezone = gmtToInternalOffset(userTzHours);
       this.selectedCity = defaultCity;
       this.markerCity = { x: defaultCity.x, y: defaultCity.y };
@@ -218,17 +207,14 @@
       this.mouseY = 0;
       this.mousePressed = false;
 
-      // Initial time values for smooth animation
       const now = new Date();
       this.initSeconds = now.getSeconds();
       this.initMinutes = now.getMinutes();
       this.initHours = now.getHours();
 
-      // Image
       this.mapImage = new Image();
       this.mapLoaded = false;
 
-      // Animation
       this.lastFrameTime = 0;
       this.animationId = null;
 
@@ -236,23 +222,19 @@
     }
 
     init() {
-      // Load map image
       this.mapImage.onload = () => {
         this.mapLoaded = true;
       };
       this.mapImage.src = 'world_1.png';
 
-      // Event listeners - mouse
       this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
       this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
       this.canvas.addEventListener('mouseup', () => this.mousePressed = false);
       this.canvas.addEventListener('mouseleave', () => this.mousePressed = false);
 
-      // Event listeners - touch (for mobile accessibility)
       this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
       this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
 
-      // Start animation
       this.animate(0);
     }
 
@@ -263,10 +245,8 @@
       this.mouseX = (e.clientX - rect.left) * scaleX;
       this.mouseY = (e.clientY - rect.top) * scaleY;
 
-      // Update cursor
       this.canvas.style.cursor = 'crosshair';
 
-      // Check for city hover (using accessible touch target size)
       for (const city of CITIES) {
         if (Math.abs(this.mouseX - city.x) <= TOUCH_TARGET_RADIUS &&
             Math.abs(this.mouseY - city.y) <= TOUCH_TARGET_RADIUS) {
@@ -297,7 +277,6 @@
       this.mouseX = x;
       this.mouseY = y;
 
-      // Check for city selection on touch
       for (const city of CITIES) {
         if (Math.abs(x - city.x) <= TOUCH_TARGET_RADIUS &&
             Math.abs(y - city.y) <= TOUCH_TARGET_RADIUS) {
@@ -320,7 +299,6 @@
     }
 
     handleInteraction(x, y) {
-      // Update timezone based on interaction position
       for (const range of TIMEZONE_RANGES) {
         if (x >= range.min && x <= range.max) {
           this.timezone = range.offset;
@@ -330,7 +308,6 @@
       }
     }
 
-    // Convert HSB to RGB
     hsbToRgb(h, s, b) {
       h = h / 360;
       s = s / 100;
@@ -386,17 +363,17 @@
 
     draw(timestamp) {
       const ctx = this.ctx;
-      const millis = timestamp % 86400000; // Wrap at 24 hours
-      const bright = Math.max(30, this.calculateBrightness()); // Minimum brightness for visibility
+      const millis = timestamp % 86400000;
+      const bright = Math.max(30, this.calculateBrightness());
       const season = this.season;
 
       // Clear canvas
-      ctx.fillStyle = '#f5f5f5';
+      ctx.fillStyle = '#fafafa';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // Draw map image as background
+      // Draw map image as background (preserving aspect ratio)
       if (this.mapLoaded) {
-        ctx.globalAlpha = 0.4;
+        ctx.globalAlpha = 0.5;
         ctx.drawImage(this.mapImage, 0, 0, WIDTH, HEIGHT);
         ctx.globalAlpha = 1;
       }
@@ -419,7 +396,6 @@
       const hourAngle = hourBase + hourOffset + (this.timezone * 30);
       const minAngle = minBase + minOffset;
 
-      // Draw clock rings with seasonal colors
       const sat = season.saturation;
 
       // Day ring (outermost)
@@ -444,57 +420,48 @@
 
       // Draw city markers
       for (const city of CITIES) {
-        // Only draw cities that are visible (within canvas)
-        if (city.y >= 0 && city.y <= HEIGHT) {
-          ctx.beginPath();
-          ctx.arc(city.x, city.y, 6, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(80, 80, 80, 0.5)';
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(city.x, city.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-          ctx.fill();
-        }
-      }
-
-      // Draw selected/active city marker (highlighted)
-      if (this.markerCity.y >= 0 && this.markerCity.y <= HEIGHT) {
         ctx.beginPath();
-        ctx.arc(this.markerCity.x, this.markerCity.y, 12, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+        ctx.arc(city.x, city.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
         ctx.fill();
-
         ctx.beginPath();
-        ctx.arc(this.markerCity.x, this.markerCity.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#ff6464';
-        ctx.lineWidth = 2;
+        ctx.arc(city.x, city.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.fill();
-        ctx.stroke();
       }
 
-      // Draw city name with background for readability
-      if (this.selectedCity.y >= 0 && this.selectedCity.y <= HEIGHT) {
-        ctx.font = `bold ${CITY_FONT_SIZE}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-        const textOffset = 14;
-        const textX = this.selectedCity.x < WIDTH - 100 ? this.selectedCity.x + textOffset : this.selectedCity.x - textOffset;
-        const textAlign = this.selectedCity.x < WIDTH - 100 ? 'left' : 'right';
-        ctx.textAlign = textAlign;
-        ctx.textBaseline = 'middle';
+      // Draw selected/active city marker
+      ctx.beginPath();
+      ctx.arc(this.markerCity.x, this.markerCity.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+      ctx.fill();
 
-        // Text background
-        const textWidth = ctx.measureText(this.selectedCity.name).width;
-        const bgX = textAlign === 'left' ? textX - 4 : textX - textWidth - 4;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillRect(bgX, this.selectedCity.y - 12, textWidth + 8, 24);
+      ctx.beginPath();
+      ctx.arc(this.markerCity.x, this.markerCity.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#ff6464';
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
 
-        // Text
-        ctx.fillStyle = '#333333';
-        ctx.fillText(this.selectedCity.name, textX, this.selectedCity.y);
-      }
+      // Draw city name with background
+      ctx.font = `bold ${CITY_FONT_SIZE}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      const textOffset = 12;
+      const textX = this.selectedCity.x < WIDTH - 100 ? this.selectedCity.x + textOffset : this.selectedCity.x - textOffset;
+      const textAlign = this.selectedCity.x < WIDTH - 100 ? 'left' : 'right';
+      ctx.textAlign = textAlign;
+      ctx.textBaseline = 'middle';
+
+      const textWidth = ctx.measureText(this.selectedCity.name).width;
+      const bgX = textAlign === 'left' ? textX - 4 : textX - textWidth - 4;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillRect(bgX, this.selectedCity.y - 10, textWidth + 8, 20);
+
+      ctx.fillStyle = '#333333';
+      ctx.fillText(this.selectedCity.name, textX, this.selectedCity.y);
 
       // Draw season indicator
-      ctx.font = '14px "Helvetica Neue", Helvetica, Arial, sans-serif';
+      ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'top';
       ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
@@ -502,7 +469,6 @@
     }
 
     animate(timestamp) {
-      // Throttle to target FPS
       if (timestamp - this.lastFrameTime >= FRAME_TIME) {
         this.lastFrameTime = timestamp;
         this.draw(timestamp);
@@ -518,7 +484,6 @@
     }
   }
 
-  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       window.bauhausClock = new BauhausClock('worldcloc');
