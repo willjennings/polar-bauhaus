@@ -94,66 +94,67 @@
     { min: 767, max: 800, offset: 17 }
   ];
 
-  // City coordinates matched to the watercolor SVG map
+  // City coordinates based on real lat/long for 800x400 equirectangular projection
+  // Formula: x = (lon + 180) / 360 * 800, y = (90 - lat) / 180 * 400
   const CITIES = [
     // North America
-    { name: "Anchorage", x: 55, y: 68, tz: -9 },
-    { name: "Los Angeles", x: 85, y: 135, tz: -8 },
-    { name: "Salt Lake City", x: 100, y: 115, tz: -7 },
-    { name: "Mexico City", x: 115, y: 170, tz: -6 },
-    { name: "Dallas", x: 125, y: 145, tz: -6 },
-    { name: "Chicago", x: 145, y: 115, tz: -6 },
-    { name: "Ottawa", x: 175, y: 100, tz: -5 },
-    { name: "New York", x: 180, y: 115, tz: -5 },
-    { name: "Halifax", x: 200, y: 95, tz: -4 },
-    { name: "Caracas", x: 190, y: 195, tz: -4 },
-    { name: "Bogota", x: 175, y: 200, tz: -5 },
+    { name: "Anchorage", x: 67, y: 64, tz: -9 },      // 61.2°N, 149.9°W
+    { name: "Los Angeles", x: 137, y: 124, tz: -8 },  // 34.05°N, 118.24°W
+    { name: "Salt Lake City", x: 151, y: 109, tz: -7 }, // 40.76°N, 111.89°W
+    { name: "Mexico City", x: 180, y: 157, tz: -6 },  // 19.43°N, 99.13°W
+    { name: "Dallas", x: 185, y: 127, tz: -6 },       // 32.78°N, 96.8°W
+    { name: "Chicago", x: 205, y: 107, tz: -6 },      // 41.88°N, 87.63°W
+    { name: "Ottawa", x: 232, y: 99, tz: -5 },        // 45.42°N, 75.7°W
+    { name: "New York", x: 235, y: 109, tz: -5 },     // 40.71°N, 74.01°W
+    { name: "Halifax", x: 259, y: 101, tz: -4 },      // 44.65°N, 63.57°W
+    { name: "Caracas", x: 251, y: 177, tz: -4 },      // 10.48°N, 66.9°W
+    { name: "Bogota", x: 235, y: 189, tz: -5 },       // 4.71°N, 74.07°W
     // South America
-    { name: "Brasilia", x: 210, y: 260, tz: -3 },
-    { name: "Santiago", x: 175, y: 320, tz: -3 },
-    { name: "Buenos Aires", x: 195, y: 330, tz: -3 },
+    { name: "Brasilia", x: 294, y: 235, tz: -3 },     // 15.79°S, 47.88°W
+    { name: "Santiago", x: 243, y: 274, tz: -3 },     // 33.45°S, 70.67°W
+    { name: "Buenos Aires", x: 270, y: 277, tz: -3 }, // 34.6°S, 58.38°W
     // Greenland/Iceland
-    { name: "Nuuk", x: 280, y: 55, tz: -3 },
-    { name: "Reykjavik", x: 350, y: 52, tz: 0 },
+    { name: "Nuuk", x: 285, y: 57, tz: -3 },          // 64.17°N, 51.74°W
+    { name: "Reykjavik", x: 351, y: 57, tz: 0 },      // 64.15°N, 21.94°W
     // Europe
-    { name: "London", x: 385, y: 80, tz: 0 },
-    { name: "Paris", x: 400, y: 90, tz: 1 },
-    { name: "Barcelona", x: 400, y: 105, tz: 1 },
-    { name: "Berlin", x: 430, y: 78, tz: 1 },
-    { name: "Rome", x: 430, y: 100, tz: 1 },
-    { name: "Warsaw", x: 450, y: 78, tz: 1 },
-    { name: "Athens", x: 455, y: 108, tz: 2 },
-    { name: "Minsk", x: 465, y: 72, tz: 3 },
-    { name: "Moscow", x: 490, y: 70, tz: 3 },
+    { name: "London", x: 400, y: 86, tz: 0 },         // 51.51°N, 0.13°W
+    { name: "Paris", x: 405, y: 91, tz: 1 },          // 48.86°N, 2.35°E
+    { name: "Barcelona", x: 405, y: 108, tz: 1 },     // 41.39°N, 2.17°E
+    { name: "Berlin", x: 430, y: 83, tz: 1 },         // 52.52°N, 13.4°E
+    { name: "Rome", x: 428, y: 107, tz: 1 },          // 41.9°N, 12.5°E
+    { name: "Warsaw", x: 447, y: 84, tz: 1 },         // 52.23°N, 21.01°E
+    { name: "Athens", x: 453, y: 116, tz: 2 },        // 37.98°N, 23.73°E
+    { name: "Minsk", x: 461, y: 80, tz: 3 },          // 53.9°N, 27.57°E
+    { name: "Moscow", x: 484, y: 76, tz: 3 },         // 55.76°N, 37.62°E
     // Africa
-    { name: "Dakar", x: 365, y: 165, tz: 0 },
-    { name: "Abuja", x: 420, y: 190, tz: 1 },
-    { name: "Luanda", x: 430, y: 255, tz: 1 },
-    { name: "Cairo", x: 470, y: 145, tz: 2 },
-    { name: "Khartoum", x: 475, y: 175, tz: 2 },
-    { name: "Benghazi", x: 450, y: 145, tz: 2 },
-    { name: "Djibouti", x: 500, y: 195, tz: 3 },
-    { name: "Dar es Salaam", x: 490, y: 255, tz: 3 },
-    { name: "Walvis Bay", x: 435, y: 295, tz: 2 },
-    { name: "Port Elizabeth", x: 465, y: 325, tz: 2 },
-    { name: "Antananarivo", x: 518, y: 300, tz: 3 },
+    { name: "Dakar", x: 361, y: 167, tz: 0 },         // 14.69°N, 17.44°W
+    { name: "Abuja", x: 416, y: 180, tz: 1 },         // 9.08°N, 7.4°E
+    { name: "Luanda", x: 429, y: 220, tz: 1 },        // 8.84°S, 13.23°E
+    { name: "Cairo", x: 469, y: 133, tz: 2 },         // 30.04°N, 31.24°E
+    { name: "Khartoum", x: 472, y: 166, tz: 2 },      // 15.5°N, 32.56°E
+    { name: "Benghazi", x: 445, y: 129, tz: 2 },      // 32.12°N, 20.07°E
+    { name: "Djibouti", x: 496, y: 174, tz: 3 },      // 11.59°N, 43.15°E
+    { name: "Dar es Salaam", x: 487, y: 215, tz: 3 }, // 6.79°S, 39.21°E
+    { name: "Walvis Bay", x: 432, y: 251, tz: 2 },    // 22.96°S, 14.51°E
+    { name: "Port Elizabeth", x: 457, y: 276, tz: 2 },// 33.96°S, 25.6°E
+    { name: "Antananarivo", x: 506, y: 242, tz: 3 },  // 18.88°S, 47.51°E
     // Middle East / Central Asia
-    { name: "Amman", x: 485, y: 145, tz: 3 },
-    { name: "Tehran", x: 520, y: 135, tz: 3.5 },
-    { name: "Dubai", x: 535, y: 160, tz: 4 },
-    { name: "Astana", x: 560, y: 78, tz: 6 },
-    { name: "Mumbai", x: 560, y: 175, tz: 5.5 },
-    { name: "Dhaka", x: 595, y: 165, tz: 6 },
+    { name: "Amman", x: 480, y: 129, tz: 3 },         // 31.95°N, 35.93°E
+    { name: "Tehran", x: 514, y: 121, tz: 3.5 },      // 35.69°N, 51.39°E
+    { name: "Dubai", x: 523, y: 144, tz: 4 },         // 25.2°N, 55.27°E
+    { name: "Astana", x: 559, y: 86, tz: 6 },         // 51.17°N, 71.45°E
+    { name: "Mumbai", x: 562, y: 158, tz: 5.5 },      // 19.08°N, 72.88°E
+    { name: "Dhaka", x: 601, y: 147, tz: 6 },         // 23.81°N, 90.41°E
     // East/Southeast Asia
-    { name: "Bangkok", x: 620, y: 195, tz: 7 },
-    { name: "Jakarta", x: 640, y: 225, tz: 7 },
-    { name: "Beijing", x: 660, y: 110, tz: 8 },
-    { name: "Tokyo", x: 715, y: 115, tz: 9 },
-    { name: "Magadan", x: 730, y: 68, tz: 11 },
+    { name: "Bangkok", x: 623, y: 169, tz: 7 },       // 13.76°N, 100.5°E
+    { name: "Jakarta", x: 637, y: 214, tz: 7 },       // 6.21°S, 106.85°E
+    { name: "Beijing", x: 658, y: 111, tz: 8 },       // 39.9°N, 116.41°E
+    { name: "Tokyo", x: 710, y: 121, tz: 9 },         // 35.68°N, 139.69°E
+    { name: "Magadan", x: 735, y: 68, tz: 11 },       // 59.56°N, 150.8°E
     // Oceania
-    { name: "Port Moresby", x: 720, y: 250, tz: 10 },
-    { name: "Brisbane", x: 740, y: 295, tz: 10 },
-    { name: "Wellington", x: 788, y: 345, tz: 12 }
+    { name: "Port Moresby", x: 727, y: 221, tz: 10 }, // 9.44°S, 147.18°E
+    { name: "Brisbane", x: 740, y: 261, tz: 10 },     // 27.47°S, 153.03°E
+    { name: "Wellington", x: 788, y: 292, tz: 12 }    // 41.29°S, 174.78°E
   ];
 
   function getUserTimezoneHours() {
@@ -231,7 +232,7 @@
       this.mapImage.onload = () => {
         this.mapLoaded = true;
       };
-      this.mapImage.src = 'world_map.svg';
+      this.mapImage.src = 'world_1.svg';
 
       this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
       this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -368,12 +369,26 @@
       const season = this.season;
 
       // Clear with off-white background
-      ctx.fillStyle = '#fefefe';
+      ctx.fillStyle = '#fafafa';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // Draw watercolor map
+      // Draw world map with watercolor tinting
       if (this.mapLoaded) {
+        // Draw the base map
+        ctx.globalAlpha = 0.7;
         ctx.drawImage(this.mapImage, 0, 0, WIDTH, HEIGHT);
+        ctx.globalAlpha = 1;
+
+        // Apply watercolor color overlay using multiply blend
+        ctx.globalCompositeOperation = 'multiply';
+        const gradient = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+        gradient.addColorStop(0, 'rgba(74, 111, 165, 0.5)');    // Blue
+        gradient.addColorStop(0.3, 'rgba(107, 91, 149, 0.5)');  // Purple
+        gradient.addColorStop(0.6, 'rgba(65, 105, 170, 0.5)');  // Blue
+        gradient.addColorStop(1, 'rgba(123, 104, 166, 0.5)');   // Purple
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.globalCompositeOperation = 'source-over';
       }
 
       // Subtle seasonal tint
