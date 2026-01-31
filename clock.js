@@ -101,6 +101,10 @@
       this.mapLoaded = false;
       this.lastFrameTime = 0;
 
+      // Animation state for seconds celebration
+      this.lastSecond = -1;
+      this.particles = [];
+
       this.init();
     }
 
@@ -232,6 +236,115 @@
       }
     }
 
+    spawnParticles(centerX, centerY) {
+      const shapes = ['circle', 'square', 'triangle'];
+      const colors = [COLORS.red, COLORS.blue, COLORS.yellow, COLORS.green];
+      const count = 8 + Math.floor(Math.random() * 5);
+
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+        const speed = 2 + Math.random() * 3;
+        this.particles.push({
+          x: centerX,
+          y: centerY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 4 + Math.random() * 8,
+          shape: shapes[Math.floor(Math.random() * shapes.length)],
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 1.0,
+          decay: 0.02 + Math.random() * 0.02,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.2
+        });
+      }
+    }
+
+    updateParticles() {
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1; // gravity
+        p.life -= p.decay;
+        p.rotation += p.rotationSpeed;
+
+        if (p.life <= 0) {
+          this.particles.splice(i, 1);
+        }
+      }
+    }
+
+    drawParticles(ctx) {
+      for (const p of this.particles) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = p.life;
+
+        ctx.fillStyle = p.color;
+        const s = p.size * p.life;
+
+        switch(p.shape) {
+          case 'circle':
+            ctx.beginPath();
+            ctx.arc(0, 0, s, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          case 'square':
+            ctx.fillRect(-s, -s, s * 2, s * 2);
+            break;
+          case 'triangle':
+            ctx.beginPath();
+            ctx.moveTo(0, -s);
+            ctx.lineTo(s, s);
+            ctx.lineTo(-s, s);
+            ctx.closePath();
+            ctx.fill();
+            break;
+        }
+
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    drawSecondsArc(ctx, centerX, centerY, time) {
+      const progress = (time.seconds + time.ms / 1000) / 60;
+      const radius = 140;
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (progress * Math.PI * 2);
+
+      // Background arc (faint)
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Progress arc with gradient effect
+      const colors = [COLORS.red, COLORS.yellow, COLORS.blue, COLORS.green];
+      const colorIndex = Math.floor(time.seconds / 15);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.strokeStyle = colors[colorIndex % colors.length];
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Draw tick at current position
+      const tickX = centerX + Math.cos(endAngle) * radius;
+      const tickY = centerY + Math.sin(endAngle) * radius;
+
+      ctx.beginPath();
+      ctx.arc(tickX, tickY, 8, 0, Math.PI * 2);
+      ctx.fillStyle = colors[colorIndex % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = COLORS.black;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     draw(timestamp) {
       const ctx = this.ctx;
 
@@ -246,10 +359,11 @@
         ctx.globalAlpha = 1;
       }
 
-      // Draw geometric Bauhaus decorations
-      this.drawBauhausElement(ctx, 50, 50, 'circle', 20, COLORS.yellow);
-      this.drawBauhausElement(ctx, WIDTH - 50, HEIGHT - 50, 'square', 15, COLORS.green);
-      this.drawBauhausElement(ctx, 50, HEIGHT - 50, 'triangle', 18, COLORS.blue);
+      // Draw geometric Bauhaus decorations (pulse on second change)
+      const pulse = this.particles.length > 0 ? 1.2 : 1.0;
+      this.drawBauhausElement(ctx, 50, 50, 'circle', 20 * pulse, COLORS.yellow);
+      this.drawBauhausElement(ctx, WIDTH - 50, HEIGHT - 50, 'square', 15 * pulse, COLORS.green);
+      this.drawBauhausElement(ctx, 50, HEIGHT - 50, 'triangle', 18 * pulse, COLORS.blue);
 
       // Draw diagonal lines (Bauhaus style)
       ctx.strokeStyle = COLORS.black;
@@ -266,6 +380,24 @@
       // Main time display (current selected city)
       const mainTime = getTimeForTimezone(this.selectedCity.tz);
       const formatted = formatTime(mainTime.hours, mainTime.minutes);
+
+      // Check for second change and spawn celebration particles
+      if (mainTime.seconds !== this.lastSecond) {
+        this.lastSecond = mainTime.seconds;
+        // Spawn particles from the seconds arc tick position
+        const arcRadius = 140;
+        const progress = mainTime.seconds / 60;
+        const angle = -Math.PI / 2 + (progress * Math.PI * 2);
+        const spawnX = WIDTH / 2 - 20 + Math.cos(angle) * arcRadius;
+        const spawnY = HEIGHT / 2 + Math.sin(angle) * arcRadius;
+        this.spawnParticles(spawnX, spawnY);
+      }
+
+      // Update and draw particles
+      this.updateParticles();
+
+      // Draw seconds progress arc
+      this.drawSecondsArc(ctx, WIDTH / 2 - 20, HEIGHT / 2, mainTime);
 
       // Large digital time
       ctx.font = 'bold 120px "Helvetica Neue", Arial, sans-serif';
@@ -336,6 +468,9 @@
           ctx.stroke();
         }
       }
+
+      // Draw celebration particles on top
+      this.drawParticles(ctx);
 
       // Hovered city tooltip
       if (this.hoveredCity && this.hoveredCity.name !== this.selectedCity.name) {
