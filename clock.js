@@ -103,6 +103,7 @@
 
       // Animation state for interlocking bars
       this.lastSecond = -1;
+      this.tickPulse = 0;  // Pulse animation on second change
 
       this.init();
     }
@@ -235,23 +236,43 @@
       }
     }
 
-    drawInterlockingBars(ctx, centerX, centerY, time) {
-      const progress = (time.seconds + time.ms / 1000) / 60;
-      const baseAngle = progress * Math.PI * 2;
+    drawInterlockingBars(ctx, centerX, centerY, time, tickPulse) {
+      // Tick-based rotation: each second snaps to a new position
+      // Plus smooth interpolation within the second
+      const secondAngle = (time.seconds / 60) * Math.PI * 2;
+      const microProgress = time.ms / 1000;
+      const tickAngle = (1 / 60) * Math.PI * 2;
 
-      // Bar dimensions
-      const barWidth = 18;
-      const barLength = 70;
+      // Eased micro-movement within each second (ease-out for snap feel)
+      const easedMicro = 1 - Math.pow(1 - microProgress, 3);
+      const baseAngle = secondAngle + (tickAngle * easedMicro);
+
+      // Bar dimensions - scale up with pulse
+      const pulseScale = 1 + (tickPulse * 0.15);
+      const barWidth = 18 * pulseScale;
+      const barLength = 70 * pulseScale;
       const innerRadius = 25;
 
       ctx.save();
       ctx.translate(centerX, centerY);
 
+      // Pulse ring effect when second ticks
+      if (tickPulse > 0) {
+        const ringRadius = innerRadius + 50 + (80 * (1 - tickPulse));
+        ctx.beginPath();
+        ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = COLORS.red;
+        ctx.lineWidth = 4 * tickPulse;
+        ctx.globalAlpha = tickPulse * 0.8;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
       // Draw three interlocking L-shaped bars rotating at different speeds
       const bars = [
-        { color: COLORS.black, angleOffset: 0, speed: 1 },
-        { color: COLORS.red, angleOffset: Math.PI * 2 / 3, speed: 1.5 },
-        { color: '#D4C36A', angleOffset: Math.PI * 4 / 3, speed: 0.75 }  // Muted yellow like the image
+        { color: COLORS.black, angleOffset: 0, speed: 6 },
+        { color: COLORS.red, angleOffset: Math.PI * 2 / 3, speed: 9 },
+        { color: '#D4C36A', angleOffset: Math.PI * 4 / 3, speed: 4.5 }
       ];
 
       bars.forEach((bar, i) => {
@@ -269,13 +290,14 @@
       });
 
       // Central ring (black outer, white inner - like the abstract)
+      const ringPulse = 1 + (tickPulse * 0.1);
       ctx.beginPath();
-      ctx.arc(0, 0, innerRadius + 8, 0, Math.PI * 2);
+      ctx.arc(0, 0, (innerRadius + 8) * ringPulse, 0, Math.PI * 2);
       ctx.fillStyle = COLORS.black;
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(0, 0, innerRadius - 5, 0, Math.PI * 2);
+      ctx.arc(0, 0, (innerRadius - 5) * ringPulse, 0, Math.PI * 2);
       ctx.fillStyle = COLORS.white;
       ctx.fill();
 
@@ -351,14 +373,20 @@
       const mainTime = getTimeForTimezone(this.selectedCity.tz);
       const formatted = formatTime(mainTime.hours, mainTime.minutes);
 
-      // Track second changes for any future effects
+      // Trigger pulse on second change
       if (mainTime.seconds !== this.lastSecond) {
         this.lastSecond = mainTime.seconds;
+        this.tickPulse = 1.0;  // Start pulse at full
+      }
+
+      // Decay pulse
+      if (this.tickPulse > 0) {
+        this.tickPulse = Math.max(0, this.tickPulse - 0.08);
       }
 
       // Draw interlocking Bauhaus bars animation (left side)
       this.drawSecondsIndicator(ctx, 120, HEIGHT / 2, mainTime);
-      this.drawInterlockingBars(ctx, 120, HEIGHT / 2, mainTime);
+      this.drawInterlockingBars(ctx, 120, HEIGHT / 2, mainTime, this.tickPulse);
 
       // Large digital time
       ctx.font = 'bold 120px "Helvetica Neue", Arial, sans-serif';
