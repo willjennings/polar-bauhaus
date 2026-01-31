@@ -304,82 +304,59 @@
       ctx.restore();
     }
 
-    drawBurstingShapes(ctx, centerX, centerY, time, tickPulse) {
-      // Shapes burst apart on tick, then ease back together
-      // tickPulse goes from 1.0 (just ticked) to 0 (settled)
+    drawBauhausAbstract(ctx, centerX, centerY, time) {
+      // Recreate the exact Bauhaus abstract from the reference image
+      // Rotates smoothly based on seconds
+      const rotation = ((time.seconds + time.ms / 1000) / 60) * Math.PI * 2;
 
-      // Ease-out for smooth return
-      const burstAmount = tickPulse * tickPulse; // Quadratic ease-out
-      const maxBurst = 80; // Maximum distance shapes travel
-      const burst = burstAmount * maxBurst;
-
-      // Size pulse - shapes grow slightly on burst
-      const sizeScale = 1 + (burstAmount * 0.5);
-
-      // Rotation on burst
-      const rotation = burstAmount * Math.PI * 0.25;
-
-      // Three shapes burst in different directions from center
-      // Yellow circle - goes up-left
-      const circleX = centerX + Math.cos(Math.PI * 1.25) * burst;
-      const circleY = centerY + Math.sin(Math.PI * 1.25) * burst;
-
-      // Red square - goes up-right
-      const squareX = centerX + Math.cos(Math.PI * 1.75) * burst;
-      const squareY = centerY + Math.sin(Math.PI * 1.75) * burst;
-
-      // Blue triangle - goes down
-      const triangleX = centerX + Math.cos(Math.PI * 0.5) * burst;
-      const triangleY = centerY + Math.sin(Math.PI * 0.5) * burst;
-
-      // Draw yellow circle
-      ctx.beginPath();
-      ctx.arc(circleX, circleY, 22 * sizeScale, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.yellow;
-      ctx.fill();
-      ctx.strokeStyle = COLORS.black;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Draw red square (rotates on burst)
       ctx.save();
-      ctx.translate(squareX, squareY);
+      ctx.translate(centerX, centerY);
       ctx.rotate(rotation);
-      const squareSize = 18 * sizeScale;
-      ctx.fillStyle = COLORS.red;
-      ctx.fillRect(-squareSize, -squareSize, squareSize * 2, squareSize * 2);
-      ctx.strokeStyle = COLORS.black;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-squareSize, -squareSize, squareSize * 2, squareSize * 2);
-      ctx.restore();
 
-      // Draw blue triangle (rotates opposite direction)
-      ctx.save();
-      ctx.translate(triangleX, triangleY);
-      ctx.rotate(-rotation);
-      const triSize = 20 * sizeScale;
+      const scale = 1.1; // Scale factor for the design
+
+      // Colors matching the reference
+      const black = COLORS.black;
+      const red = '#C41E3A';  // Slightly darker red like the image
+      const cream = '#D4C36A'; // Muted yellow/cream
+
+      // Layer 1: Black vertical bar (behind others at bottom)
+      ctx.fillStyle = black;
+      ctx.fillRect(-12 * scale, 10 * scale, 24 * scale, 70 * scale);
+
+      // Layer 2: Cream/yellow L-shape
+      ctx.fillStyle = cream;
+      // Vertical part
+      ctx.fillRect(-45 * scale, -30 * scale, 22 * scale, 90 * scale);
+      // Horizontal part
+      ctx.fillRect(-45 * scale, 38 * scale, 70 * scale, 22 * scale);
+
+      // Layer 3: Red horizontal bar
+      ctx.fillStyle = red;
+      ctx.fillRect(-20 * scale, -5 * scale, 85 * scale, 28 * scale);
+
+      // Layer 4: Black horizontal bar at bottom
+      ctx.fillStyle = black;
+      ctx.fillRect(-30 * scale, 55 * scale, 75 * scale, 18 * scale);
+
+      // Layer 5: Black curved section going up-left from ring
+      ctx.fillStyle = black;
+      ctx.fillRect(-12 * scale, -75 * scale, 24 * scale, 50 * scale);
+
+      // Layer 6: The ring (black donut with white center) - drawn last on top
+      // Outer black circle
       ctx.beginPath();
-      ctx.moveTo(0, -triSize);
-      ctx.lineTo(triSize, triSize);
-      ctx.lineTo(-triSize, triSize);
-      ctx.closePath();
-      ctx.fillStyle = COLORS.blue;
+      ctx.arc(0, -50 * scale, 32 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = black;
       ctx.fill();
-      ctx.strokeStyle = COLORS.black;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
 
-      // Center dot when shapes are together
-      if (tickPulse < 0.3) {
-        const dotAlpha = 1 - (tickPulse / 0.3);
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-        ctx.fillStyle = COLORS.black;
-        ctx.globalAlpha = dotAlpha;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
+      // Inner white circle (hole)
+      ctx.beginPath();
+      ctx.arc(0, -50 * scale, 16 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.white;
+      ctx.fill();
+
+      ctx.restore();
     }
 
     drawSecondsIndicator(ctx, centerX, centerY, time) {
@@ -445,8 +422,8 @@
         this.tickPulse = Math.max(0, this.tickPulse - 0.04);
       }
 
-      // Draw bursting Bauhaus shapes animation (left side)
-      this.drawBurstingShapes(ctx, 110, HEIGHT / 2, mainTime, this.tickPulse);
+      // Draw Bauhaus abstract animation (left side)
+      this.drawBauhausAbstract(ctx, 120, HEIGHT / 2, mainTime);
 
       // Large digital time
       ctx.font = 'bold 120px "Helvetica Neue", Arial, sans-serif';
