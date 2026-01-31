@@ -304,6 +304,84 @@
       ctx.restore();
     }
 
+    drawBurstingShapes(ctx, centerX, centerY, time, tickPulse) {
+      // Shapes burst apart on tick, then ease back together
+      // tickPulse goes from 1.0 (just ticked) to 0 (settled)
+
+      // Ease-out for smooth return
+      const burstAmount = tickPulse * tickPulse; // Quadratic ease-out
+      const maxBurst = 80; // Maximum distance shapes travel
+      const burst = burstAmount * maxBurst;
+
+      // Size pulse - shapes grow slightly on burst
+      const sizeScale = 1 + (burstAmount * 0.5);
+
+      // Rotation on burst
+      const rotation = burstAmount * Math.PI * 0.25;
+
+      // Three shapes burst in different directions from center
+      // Yellow circle - goes up-left
+      const circleX = centerX + Math.cos(Math.PI * 1.25) * burst;
+      const circleY = centerY + Math.sin(Math.PI * 1.25) * burst;
+
+      // Red square - goes up-right
+      const squareX = centerX + Math.cos(Math.PI * 1.75) * burst;
+      const squareY = centerY + Math.sin(Math.PI * 1.75) * burst;
+
+      // Blue triangle - goes down
+      const triangleX = centerX + Math.cos(Math.PI * 0.5) * burst;
+      const triangleY = centerY + Math.sin(Math.PI * 0.5) * burst;
+
+      // Draw yellow circle
+      ctx.beginPath();
+      ctx.arc(circleX, circleY, 22 * sizeScale, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.yellow;
+      ctx.fill();
+      ctx.strokeStyle = COLORS.black;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw red square (rotates on burst)
+      ctx.save();
+      ctx.translate(squareX, squareY);
+      ctx.rotate(rotation);
+      const squareSize = 18 * sizeScale;
+      ctx.fillStyle = COLORS.red;
+      ctx.fillRect(-squareSize, -squareSize, squareSize * 2, squareSize * 2);
+      ctx.strokeStyle = COLORS.black;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-squareSize, -squareSize, squareSize * 2, squareSize * 2);
+      ctx.restore();
+
+      // Draw blue triangle (rotates opposite direction)
+      ctx.save();
+      ctx.translate(triangleX, triangleY);
+      ctx.rotate(-rotation);
+      const triSize = 20 * sizeScale;
+      ctx.beginPath();
+      ctx.moveTo(0, -triSize);
+      ctx.lineTo(triSize, triSize);
+      ctx.lineTo(-triSize, triSize);
+      ctx.closePath();
+      ctx.fillStyle = COLORS.blue;
+      ctx.fill();
+      ctx.strokeStyle = COLORS.black;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Center dot when shapes are together
+      if (tickPulse < 0.3) {
+        const dotAlpha = 1 - (tickPulse / 0.3);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.black;
+        ctx.globalAlpha = dotAlpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
     drawSecondsIndicator(ctx, centerX, centerY, time) {
       // Small tick marks around the mechanism
       const radius = 100;
@@ -352,23 +430,6 @@
         ctx.globalAlpha = 1;
       }
 
-      // Draw geometric Bauhaus decorations
-      this.drawBauhausElement(ctx, 50, 50, 'circle', 20, COLORS.yellow);
-      this.drawBauhausElement(ctx, WIDTH - 50, HEIGHT - 50, 'square', 15, COLORS.green);
-      this.drawBauhausElement(ctx, 50, HEIGHT - 50, 'triangle', 18, COLORS.blue);
-
-      // Draw diagonal lines (Bauhaus style)
-      ctx.strokeStyle = COLORS.black;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.1;
-      for (let i = 0; i < 8; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, i * 60);
-        ctx.lineTo(i * 60, 0);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
       // Main time display (current selected city)
       const mainTime = getTimeForTimezone(this.selectedCity.tz);
       const formatted = formatTime(mainTime.hours, mainTime.minutes);
@@ -379,14 +440,13 @@
         this.tickPulse = 1.0;  // Start pulse at full
       }
 
-      // Decay pulse
+      // Decay pulse (slower for more visible animation)
       if (this.tickPulse > 0) {
-        this.tickPulse = Math.max(0, this.tickPulse - 0.08);
+        this.tickPulse = Math.max(0, this.tickPulse - 0.04);
       }
 
-      // Draw interlocking Bauhaus bars animation (left side)
-      this.drawSecondsIndicator(ctx, 120, HEIGHT / 2, mainTime);
-      this.drawInterlockingBars(ctx, 120, HEIGHT / 2, mainTime, this.tickPulse);
+      // Draw bursting Bauhaus shapes animation (left side)
+      this.drawBurstingShapes(ctx, 110, HEIGHT / 2, mainTime, this.tickPulse);
 
       // Large digital time
       ctx.font = 'bold 120px "Helvetica Neue", Arial, sans-serif';
