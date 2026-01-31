@@ -26,43 +26,43 @@
     second: 70
   };
 
-  // Seasonal color palettes - complementing watercolor aesthetic
+  // Seasonal color palettes - Bold Bauhaus primary colors
   const SEASONS = {
     spring: {
       name: 'Spring',
-      day: 140,      // Soft green
-      hour: 320,     // Soft pink
-      minute: 180,   // Soft cyan
-      second: 50,    // Soft gold
-      saturation: 45,
-      bgTint: 'rgba(200, 230, 200, 0.08)'
+      day: 120,      // Vibrant green
+      hour: 50,      // Golden yellow
+      minute: 340,   // Magenta pink
+      second: 200,   // Cyan blue
+      saturation: 90,
+      bgTint: 'rgba(200, 255, 200, 0.04)'
     },
     summer: {
       name: 'Summer',
-      day: 35,       // Warm orange
-      hour: 55,      // Golden yellow
-      minute: 185,   // Turquoise
-      second: 15,    // Coral
-      saturation: 55,
-      bgTint: 'rgba(255, 240, 200, 0.08)'
+      day: 50,       // Bright yellow
+      hour: 15,      // Orange-red
+      minute: 220,   // Royal blue
+      second: 140,   // Teal green
+      saturation: 95,
+      bgTint: 'rgba(255, 250, 200, 0.04)'
     },
     fall: {
       name: 'Fall',
-      day: 25,       // Burnt sienna
-      hour: 45,      // Amber
-      minute: 270,   // Plum
-      second: 5,     // Deep red
-      saturation: 50,
-      bgTint: 'rgba(220, 180, 140, 0.08)'
+      day: 30,       // Deep orange
+      hour: 0,       // Pure red
+      minute: 270,   // Purple
+      second: 50,    // Gold yellow
+      saturation: 90,
+      bgTint: 'rgba(255, 220, 180, 0.04)'
     },
     winter: {
       name: 'Winter',
-      day: 220,      // Soft blue (matches watercolor)
-      hour: 260,     // Soft purple (matches watercolor)
-      minute: 200,   // Teal
-      second: 240,   // Lavender
-      saturation: 40,
-      bgTint: 'rgba(180, 200, 230, 0.08)'
+      day: 220,      // Bold blue
+      hour: 0,       // Bold red
+      minute: 50,    // Bold yellow
+      second: 140,   // Bold green
+      saturation: 100,
+      bgTint: 'rgba(220, 235, 255, 0.04)'
     }
   };
 
@@ -411,26 +411,26 @@
 
       const sat = season.saturation;
 
-      // Draw clock rings with softer, more translucent colors
+      // Draw clock rings with bold Bauhaus colors
       // Day ring (outermost)
       const dStart = (-90 + dayAngle) * Math.PI / 180;
       const dEnd = (90 + dayAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.day, dStart, dEnd, season.day, sat, bright / 2, 22);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.day, dStart, dEnd, season.day, sat, bright, 35);
 
       // Hour ring
       const hStart = (-90 + hourAngle) * Math.PI / 180;
       const hEnd = (90 + hourAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.hour, hStart, hEnd, season.hour, sat, bright, 26);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.hour, hStart, hEnd, season.hour, sat, bright, 40);
 
       // Minute ring
       const mStart = (-90 + minAngle) * Math.PI / 180;
       const mEnd = (90 + minAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.minute, mStart, mEnd, season.minute, sat, bright, 30);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.minute, mStart, mEnd, season.minute, sat, bright, 45);
 
       // Second ring (innermost)
       const sStart = (-90 + secOffset) * Math.PI / 180;
       const sEnd = (90 + secOffset) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.second, sStart, sEnd, season.second, sat, bright, 35);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.second, sStart, sEnd, season.second, sat, bright, 50);
 
       // Draw city markers with subtle styling
       for (const city of CITIES) {
