@@ -1,7 +1,7 @@
 /**
  * Bauhaus World Clock - Optimized vanilla JS implementation
  * Original concept by Will Jennings and Alex Dodge
- * Enhanced with seasonal colors and map overlay
+ * Enhanced with seasonal colors and watercolor map overlay
  */
 (function() {
   'use strict';
@@ -14,139 +14,146 @@
   const TARGET_FPS = 30;
   const FRAME_TIME = 1000 / TARGET_FPS;
 
-  // Accessibility: WCAG 2.1 recommends minimum 44x44px touch targets
-  const TOUCH_TARGET_RADIUS = 22;
-  const CITY_FONT_SIZE = 14;
+  // Accessibility
+  const TOUCH_TARGET_RADIUS = 20;
+  const CITY_FONT_SIZE = 13;
 
-  // Clock ring sizes - adjusted for wider canvas
+  // Clock ring sizes - fits within the map
   const RINGS = {
-    day: 380,
-    hour: 280,
-    minute: 180,
-    second: 80
+    day: 360,
+    hour: 260,
+    minute: 160,
+    second: 70
   };
 
-  // Seasonal color palettes (HSB hues)
+  // Seasonal color palettes - complementing watercolor aesthetic
   const SEASONS = {
     spring: {
       name: 'Spring',
-      day: 150,
-      hour: 330,
-      minute: 270,
-      second: 45,
-      saturation: 70,
-      bgTint: 'rgba(144, 238, 144, 0.1)'
+      day: 140,      // Soft green
+      hour: 320,     // Soft pink
+      minute: 180,   // Soft cyan
+      second: 50,    // Soft gold
+      saturation: 45,
+      bgTint: 'rgba(200, 230, 200, 0.08)'
     },
     summer: {
       name: 'Summer',
-      day: 45,
-      hour: 60,
-      minute: 190,
-      second: 0,
-      saturation: 90,
-      bgTint: 'rgba(255, 223, 128, 0.1)'
+      day: 35,       // Warm orange
+      hour: 55,      // Golden yellow
+      minute: 185,   // Turquoise
+      second: 15,    // Coral
+      saturation: 55,
+      bgTint: 'rgba(255, 240, 200, 0.08)'
     },
     fall: {
       name: 'Fall',
-      day: 25,
-      hour: 40,
-      minute: 280,
-      second: 350,
-      saturation: 85,
-      bgTint: 'rgba(205, 133, 63, 0.1)'
+      day: 25,       // Burnt sienna
+      hour: 45,      // Amber
+      minute: 270,   // Plum
+      second: 5,     // Deep red
+      saturation: 50,
+      bgTint: 'rgba(220, 180, 140, 0.08)'
     },
     winter: {
       name: 'Winter',
-      day: 200,
-      hour: 220,
-      minute: 260,
-      second: 180,
-      saturation: 50,
-      bgTint: 'rgba(176, 224, 230, 0.1)'
+      day: 220,      // Soft blue (matches watercolor)
+      hour: 260,     // Soft purple (matches watercolor)
+      minute: 200,   // Teal
+      second: 240,   // Lavender
+      saturation: 40,
+      bgTint: 'rgba(180, 200, 230, 0.08)'
     }
   };
 
-  // Timezone ranges scaled for 800px width
+  // Timezone ranges for 800px width
   const TIMEZONE_RANGES = [
-    { min: 0, max: 33, offset: 18 },     // GMT-11
-    { min: 33, max: 67, offset: 19 },    // GMT-10
-    { min: 67, max: 100, offset: 20 },   // GMT-9
-    { min: 100, max: 133, offset: 21 },  // GMT-8
-    { min: 133, max: 167, offset: 22 },  // GMT-7
-    { min: 167, max: 200, offset: 23 },  // GMT-6
-    { min: 200, max: 233, offset: 0 },   // GMT-5 (Eastern)
-    { min: 233, max: 267, offset: 1 },   // GMT-4
-    { min: 267, max: 300, offset: 2 },   // GMT-3
-    { min: 300, max: 333, offset: 3 },   // GMT-2
-    { min: 333, max: 367, offset: 4 },   // GMT-1
-    { min: 367, max: 400, offset: 5 },   // GMT(0)
-    { min: 400, max: 433, offset: 6 },   // GMT+1
-    { min: 433, max: 467, offset: 7 },   // GMT+2
-    { min: 467, max: 500, offset: 8 },   // GMT+3
-    { min: 500, max: 533, offset: 9 },   // GMT+4
-    { min: 533, max: 567, offset: 10 },  // GMT+5
-    { min: 567, max: 600, offset: 11 },  // GMT+6
-    { min: 600, max: 633, offset: 12 },  // GMT+7
-    { min: 633, max: 667, offset: 13 },  // GMT+8
-    { min: 667, max: 700, offset: 14 },  // GMT+9
-    { min: 700, max: 733, offset: 15 },  // GMT+10
-    { min: 733, max: 767, offset: 16 },  // GMT+11
-    { min: 767, max: 800, offset: 17 }   // GMT+12
+    { min: 0, max: 33, offset: 18 },
+    { min: 33, max: 67, offset: 19 },
+    { min: 67, max: 100, offset: 20 },
+    { min: 100, max: 133, offset: 21 },
+    { min: 133, max: 167, offset: 22 },
+    { min: 167, max: 200, offset: 23 },
+    { min: 200, max: 233, offset: 0 },
+    { min: 233, max: 267, offset: 1 },
+    { min: 267, max: 300, offset: 2 },
+    { min: 300, max: 333, offset: 3 },
+    { min: 333, max: 367, offset: 4 },
+    { min: 367, max: 400, offset: 5 },
+    { min: 400, max: 433, offset: 6 },
+    { min: 433, max: 467, offset: 7 },
+    { min: 467, max: 500, offset: 8 },
+    { min: 500, max: 533, offset: 9 },
+    { min: 533, max: 567, offset: 10 },
+    { min: 567, max: 600, offset: 11 },
+    { min: 600, max: 633, offset: 12 },
+    { min: 633, max: 667, offset: 13 },
+    { min: 667, max: 700, offset: 14 },
+    { min: 700, max: 733, offset: 15 },
+    { min: 733, max: 767, offset: 16 },
+    { min: 767, max: 800, offset: 17 }
   ];
 
-  // City data with real geographic coordinates converted to canvas positions
-  // Formula: x = (longitude + 180) / 360 * WIDTH, y = (90 - latitude) / 180 * HEIGHT
+  // City coordinates matched to the watercolor SVG map
   const CITIES = [
-    { name: "Anchorage", x: 67, y: 64, tz: -9 },
-    { name: "Los Angeles", x: 137, y: 124, tz: -8 },
-    { name: "Salt Lake City", x: 151, y: 109, tz: -7 },
-    { name: "Mexico City", x: 180, y: 157, tz: -6 },
-    { name: "Dallas", x: 185, y: 127, tz: -6 },
-    { name: "Chicago", x: 205, y: 107, tz: -6 },
-    { name: "Santiago", x: 243, y: 274, tz: -3 },
-    { name: "Buenos Aires", x: 270, y: 277, tz: -3 },
-    { name: "Bogota", x: 235, y: 190, tz: -5 },
-    { name: "Caracas", x: 251, y: 177, tz: -4 },
-    { name: "Ottawa", x: 232, y: 99, tz: -5 },
-    { name: "New York", x: 236, y: 110, tz: -5 },
-    { name: "Brasilia", x: 294, y: 235, tz: -3 },
-    { name: "Halifax", x: 259, y: 101, tz: -4 },
-    { name: "Nuuk", x: 285, y: 57, tz: -3 },
-    { name: "Reykjavik", x: 351, y: 57, tz: 0 },
-    { name: "London", x: 400, y: 86, tz: 0 },
-    { name: "Barcelona", x: 405, y: 108, tz: 1 },
-    { name: "Dakar", x: 361, y: 167, tz: 0 },
-    { name: "Paris", x: 405, y: 91, tz: 1 },
-    { name: "Rome", x: 428, y: 107, tz: 1 },
-    { name: "Berlin", x: 430, y: 83, tz: 1 },
-    { name: "Minsk", x: 461, y: 80, tz: 3 },
-    { name: "Warsaw", x: 447, y: 84, tz: 1 },
-    { name: "Moscow", x: 484, y: 76, tz: 3 },
-    { name: "Athens", x: 453, y: 116, tz: 2 },
-    { name: "Tehran", x: 514, y: 121, tz: 3.5 },
-    { name: "Dubai", x: 523, y: 144, tz: 4 },
-    { name: "Astana", x: 559, y: 86, tz: 6 },
-    { name: "Mumbai", x: 562, y: 158, tz: 5.5 },
-    { name: "Dhaka", x: 601, y: 147, tz: 6 },
-    { name: "Bangkok", x: 623, y: 169, tz: 7 },
-    { name: "Jakarta", x: 637, y: 214, tz: 7 },
-    { name: "Beijing", x: 658, y: 111, tz: 8 },
-    { name: "Tokyo", x: 710, y: 121, tz: 9 },
-    { name: "Port Moresby", x: 727, y: 221, tz: 10 },
-    { name: "Brisbane", x: 740, y: 261, tz: 10 },
-    { name: "Wellington", x: 788, y: 292, tz: 12 },
-    { name: "Magadan", x: 735, y: 68, tz: 11 },
-    { name: "Port Elizabeth", x: 457, y: 276, tz: 2 },
-    { name: "Walvis Bay", x: 432, y: 251, tz: 2 },
-    { name: "Luanda", x: 429, y: 220, tz: 1 },
-    { name: "Abuja", x: 416, y: 180, tz: 1 },
-    { name: "Djibouti", x: 496, y: 174, tz: 3 },
-    { name: "Cairo", x: 469, y: 133, tz: 2 },
-    { name: "Amman", x: 480, y: 129, tz: 3 },
-    { name: "Benghazi", x: 445, y: 129, tz: 2 },
-    { name: "Khartoum", x: 472, y: 166, tz: 2 },
-    { name: "Dar es Salaam", x: 487, y: 215, tz: 3 },
-    { name: "Antananarivo", x: 506, y: 242, tz: 3 }
+    // North America
+    { name: "Anchorage", x: 55, y: 68, tz: -9 },
+    { name: "Los Angeles", x: 85, y: 135, tz: -8 },
+    { name: "Salt Lake City", x: 100, y: 115, tz: -7 },
+    { name: "Mexico City", x: 115, y: 170, tz: -6 },
+    { name: "Dallas", x: 125, y: 145, tz: -6 },
+    { name: "Chicago", x: 145, y: 115, tz: -6 },
+    { name: "Ottawa", x: 175, y: 100, tz: -5 },
+    { name: "New York", x: 180, y: 115, tz: -5 },
+    { name: "Halifax", x: 200, y: 95, tz: -4 },
+    { name: "Caracas", x: 190, y: 195, tz: -4 },
+    { name: "Bogota", x: 175, y: 200, tz: -5 },
+    // South America
+    { name: "Brasilia", x: 210, y: 260, tz: -3 },
+    { name: "Santiago", x: 175, y: 320, tz: -3 },
+    { name: "Buenos Aires", x: 195, y: 330, tz: -3 },
+    // Greenland/Iceland
+    { name: "Nuuk", x: 280, y: 55, tz: -3 },
+    { name: "Reykjavik", x: 350, y: 52, tz: 0 },
+    // Europe
+    { name: "London", x: 385, y: 80, tz: 0 },
+    { name: "Paris", x: 400, y: 90, tz: 1 },
+    { name: "Barcelona", x: 400, y: 105, tz: 1 },
+    { name: "Berlin", x: 430, y: 78, tz: 1 },
+    { name: "Rome", x: 430, y: 100, tz: 1 },
+    { name: "Warsaw", x: 450, y: 78, tz: 1 },
+    { name: "Athens", x: 455, y: 108, tz: 2 },
+    { name: "Minsk", x: 465, y: 72, tz: 3 },
+    { name: "Moscow", x: 490, y: 70, tz: 3 },
+    // Africa
+    { name: "Dakar", x: 365, y: 165, tz: 0 },
+    { name: "Abuja", x: 420, y: 190, tz: 1 },
+    { name: "Luanda", x: 430, y: 255, tz: 1 },
+    { name: "Cairo", x: 470, y: 145, tz: 2 },
+    { name: "Khartoum", x: 475, y: 175, tz: 2 },
+    { name: "Benghazi", x: 450, y: 145, tz: 2 },
+    { name: "Djibouti", x: 500, y: 195, tz: 3 },
+    { name: "Dar es Salaam", x: 490, y: 255, tz: 3 },
+    { name: "Walvis Bay", x: 435, y: 295, tz: 2 },
+    { name: "Port Elizabeth", x: 465, y: 325, tz: 2 },
+    { name: "Antananarivo", x: 518, y: 300, tz: 3 },
+    // Middle East / Central Asia
+    { name: "Amman", x: 485, y: 145, tz: 3 },
+    { name: "Tehran", x: 520, y: 135, tz: 3.5 },
+    { name: "Dubai", x: 535, y: 160, tz: 4 },
+    { name: "Astana", x: 560, y: 78, tz: 6 },
+    { name: "Mumbai", x: 560, y: 175, tz: 5.5 },
+    { name: "Dhaka", x: 595, y: 165, tz: 6 },
+    // East/Southeast Asia
+    { name: "Bangkok", x: 620, y: 195, tz: 7 },
+    { name: "Jakarta", x: 640, y: 225, tz: 7 },
+    { name: "Beijing", x: 660, y: 110, tz: 8 },
+    { name: "Tokyo", x: 715, y: 115, tz: 9 },
+    { name: "Magadan", x: 730, y: 68, tz: 11 },
+    // Oceania
+    { name: "Port Moresby", x: 720, y: 250, tz: 10 },
+    { name: "Brisbane", x: 740, y: 295, tz: 10 },
+    { name: "Wellington", x: 788, y: 345, tz: 12 }
   ];
 
   function getUserTimezoneHours() {
@@ -158,7 +165,7 @@
   }
 
   function findClosestCity(userTzHours) {
-    let closest = CITIES[11]; // Default to New York
+    let closest = CITIES.find(c => c.name === "New York") || CITIES[0];
     let minDiff = Infinity;
 
     for (const city of CITIES) {
@@ -205,7 +212,6 @@
       this.markerCity = { x: defaultCity.x, y: defaultCity.y };
       this.mouseX = 0;
       this.mouseY = 0;
-      this.mousePressed = false;
 
       const now = new Date();
       this.initSeconds = now.getSeconds();
@@ -225,13 +231,10 @@
       this.mapImage.onload = () => {
         this.mapLoaded = true;
       };
-      this.mapImage.src = 'world_1.png';
+      this.mapImage.src = 'world_map.svg';
 
       this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
       this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-      this.canvas.addEventListener('mouseup', () => this.mousePressed = false);
-      this.canvas.addEventListener('mouseleave', () => this.mousePressed = false);
-
       this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
       this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
 
@@ -257,7 +260,6 @@
     }
 
     handleMouseDown(e) {
-      this.mousePressed = true;
       const rect = this.canvas.getBoundingClientRect();
       const scaleX = WIDTH / rect.width;
       const scaleY = HEIGHT / rect.height;
@@ -274,8 +276,6 @@
       const touch = e.touches[0];
       const x = (touch.clientX - rect.left) * scaleX;
       const y = (touch.clientY - rect.top) * scaleY;
-      this.mouseX = x;
-      this.mouseY = y;
 
       for (const city of CITIES) {
         if (Math.abs(x - city.x) <= TOUCH_TARGET_RADIUS &&
@@ -364,21 +364,19 @@
     draw(timestamp) {
       const ctx = this.ctx;
       const millis = timestamp % 86400000;
-      const bright = Math.max(30, this.calculateBrightness());
+      const bright = Math.max(40, this.calculateBrightness());
       const season = this.season;
 
-      // Clear canvas
-      ctx.fillStyle = '#fafafa';
+      // Clear with off-white background
+      ctx.fillStyle = '#fefefe';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // Draw map image as background (preserving aspect ratio)
+      // Draw watercolor map
       if (this.mapLoaded) {
-        ctx.globalAlpha = 0.5;
         ctx.drawImage(this.mapImage, 0, 0, WIDTH, HEIGHT);
-        ctx.globalAlpha = 1;
       }
 
-      // Seasonal background tint
+      // Subtle seasonal tint
       ctx.fillStyle = season.bgTint;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
@@ -398,74 +396,73 @@
 
       const sat = season.saturation;
 
+      // Draw clock rings with softer, more translucent colors
       // Day ring (outermost)
       const dStart = (-90 + dayAngle) * Math.PI / 180;
       const dEnd = (90 + dayAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.day, dStart, dEnd, season.day, sat, bright / 2, 25);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.day, dStart, dEnd, season.day, sat, bright / 2, 22);
 
       // Hour ring
       const hStart = (-90 + hourAngle) * Math.PI / 180;
       const hEnd = (90 + hourAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.hour, hStart, hEnd, season.hour, sat, bright, 30);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.hour, hStart, hEnd, season.hour, sat, bright, 26);
 
       // Minute ring
       const mStart = (-90 + minAngle) * Math.PI / 180;
       const mEnd = (90 + minAngle) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.minute, mStart, mEnd, season.minute, sat, bright, 35);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.minute, mStart, mEnd, season.minute, sat, bright, 30);
 
       // Second ring (innermost)
       const sStart = (-90 + secOffset) * Math.PI / 180;
       const sEnd = (90 + secOffset) * Math.PI / 180;
-      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.second, sStart, sEnd, season.second, sat, bright, 40);
+      this.drawArc(CLOCK_CENTER_X, CLOCK_CENTER_Y, RINGS.second, sStart, sEnd, season.second, sat, bright, 35);
 
-      // Draw city markers
+      // Draw city markers with subtle styling
       for (const city of CITIES) {
         ctx.beginPath();
-        ctx.arc(city.x, city.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(60, 60, 60, 0.5)';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(city.x, city.y, 3, 0, Math.PI * 2);
+        ctx.arc(city.x, city.y, 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.fill();
+        ctx.strokeStyle = 'rgba(100, 100, 120, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
 
-      // Draw selected/active city marker
+      // Draw selected city marker
       ctx.beginPath();
-      ctx.arc(this.markerCity.x, this.markerCity.y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+      ctx.arc(this.markerCity.x, this.markerCity.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(this.markerCity.x, this.markerCity.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#ff6464';
-      ctx.lineWidth = 2;
-      ctx.fill();
+      ctx.strokeStyle = 'rgba(180, 100, 130, 0.8)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Draw city name with background
-      ctx.font = `bold ${CITY_FONT_SIZE}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-      const textOffset = 12;
+      // Draw city name with elegant styling
+      ctx.font = `600 ${CITY_FONT_SIZE}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      const textOffset = 14;
       const textX = this.selectedCity.x < WIDTH - 100 ? this.selectedCity.x + textOffset : this.selectedCity.x - textOffset;
       const textAlign = this.selectedCity.x < WIDTH - 100 ? 'left' : 'right';
       ctx.textAlign = textAlign;
       ctx.textBaseline = 'middle';
 
+      // Text with subtle shadow
       const textWidth = ctx.measureText(this.selectedCity.name).width;
-      const bgX = textAlign === 'left' ? textX - 4 : textX - textWidth - 4;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.fillRect(bgX, this.selectedCity.y - 10, textWidth + 8, 20);
+      const bgX = textAlign === 'left' ? textX - 6 : textX - textWidth - 6;
 
-      ctx.fillStyle = '#333333';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect(bgX, this.selectedCity.y - 11, textWidth + 12, 22, 4);
+      ctx.fill();
+
+      ctx.fillStyle = '#4a5568';
       ctx.fillText(this.selectedCity.name, textX, this.selectedCity.y);
 
-      // Draw season indicator
-      ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+      // Season indicator
+      ctx.font = '11px "Helvetica Neue", Helvetica, Arial, sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
-      ctx.fillText(season.name, WIDTH - 10, 10);
+      ctx.fillStyle = 'rgba(90, 90, 110, 0.6)';
+      ctx.fillText(season.name, WIDTH - 12, 12);
     }
 
     animate(timestamp) {

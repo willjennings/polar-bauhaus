@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+  <defs>
+    <!-- Watercolor gradient for continents -->
+    <linearGradient id="watercolor1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a6fa5"/>
+      <stop offset="30%" style="stop-color:#6b5b95"/>
+      <stop offset="60%" style="stop-color:#4169aa"/>
+      <stop offset="100%" style="stop-color:#7b68a6"/>
+    </linearGradient>
+    <linearGradient id="watercolor2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5d6d9e"/>
+      <stop offset="40%" style="stop-color:#8b7bab"/>
+      <stop offset="70%" style="stop-color:#4a7fb5"/>
+      <stop offset="100%" style="stop-color:#6a5a94"/>
+    </linearGradient>
+    <linearGradient id="watercolor3" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7b6ba6"/>
+      <stop offset="50%" style="stop-color:#4a80b0"/>
+      <stop offset="100%" style="stop-color:#5b5b95"/>
+    </linearGradient>
+    <!-- Filter for watercolor effect -->
+    <filter id="watercolorFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="400" fill="#fefefe"/>
+
+  <!-- North America -->
+  <path fill="url(#watercolor1)" filter="url(#watercolorFilter)" d="
+    M 30 70
+    Q 40 60, 60 55
+    Q 90 50, 120 52
+    Q 140 48, 160 55
+    Q 175 50, 185 58
+    Q 195 52, 205 60
+    L 210 75
+    Q 200 85, 190 90
+    Q 180 95, 175 105
+    Q 165 115, 155 120
+    Q 145 130, 140 145
+    Q 135 155, 125 165
+    Q 115 175, 105 180
+    L 95 190
+    Q 85 185, 80 175
+    Q 70 165, 65 155
+    Q 55 145, 50 135
+    Q 40 125, 35 115
+    Q 25 105, 22 95
+    Q 20 85, 25 75
+    Z"/>
+
+  <!-- Greenland -->
+  <path fill="url(#watercolor2)" filter="url(#watercolorFilter)" d="
+    M 265 35
+    Q 280 30, 295 35
+    Q 310 40, 305 55
+    Q 300 70, 285 75
+    Q 270 78, 260 70
+    Q 250 60, 255 45
+    Z"/>
+
+  <!-- South America -->
+  <path fill="url(#watercolor3)" filter="url(#watercolorFilter)" d="
+    M 165 195
+    Q 175 190, 185 195
+    Q 195 200, 200 215
+    Q 210 235, 205 260
+    Q 200 285, 190 310
+    Q 180 335, 165 355
+    Q 155 365, 145 360
+    Q 135 350, 140 330
+    Q 145 310, 150 285
+    Q 152 260, 155 240
+    Q 158 220, 160 205
+    Z"/>
+
+  <!-- Europe -->
+  <path fill="url(#watercolor1)" filter="url(#watercolorFilter)" d="
+    M 380 55
+    Q 395 50, 410 52
+    Q 430 55, 445 60
+    Q 460 58, 475 65
+    Q 485 75, 480 90
+    Q 475 100, 465 108
+    Q 450 115, 435 112
+    Q 420 115, 405 110
+    Q 390 105, 380 95
+    Q 370 85, 375 70
+    Z"/>
+
+  <!-- Africa -->
+  <path fill="url(#watercolor2)" filter="url(#watercolorFilter)" d="
+    M 395 135
+    Q 415 130, 440 135
+    Q 465 140, 485 155
+    Q 500 175, 505 200
+    Q 508 230, 500 260
+    Q 490 290, 470 315
+    Q 450 335, 425 340
+    Q 400 338, 390 320
+    Q 382 300, 385 275
+    Q 388 250, 390 220
+    Q 392 190, 390 165
+    Q 388 145, 395 135
+    Z"/>
+
+  <!-- Asia -->
+  <path fill="url(#watercolor3)" filter="url(#watercolorFilter)" d="
+    M 490 45
+    Q 520 40, 560 42
+    Q 600 45, 640 50
+    Q 680 55, 710 65
+    Q 735 75, 740 90
+    Q 738 105, 725 115
+    Q 710 125, 690 130
+    Q 665 135, 640 140
+    Q 615 145, 590 155
+    Q 565 165, 545 175
+    Q 525 182, 510 178
+    Q 495 170, 490 155
+    Q 485 135, 488 115
+    Q 490 95, 495 75
+    Q 492 55, 490 45
+    Z"/>
+
+  <!-- India -->
+  <path fill="url(#watercolor1)" filter="url(#watercolorFilter)" d="
+    M 545 155
+    Q 560 150, 575 158
+    Q 585 170, 580 190
+    Q 575 210, 560 220
+    Q 545 225, 535 215
+    Q 530 200, 535 180
+    Q 540 165, 545 155
+    Z"/>
+
+  <!-- Southeast Asia / Indonesia -->
+  <path fill="url(#watercolor2)" filter="url(#watercolorFilter)" d="
+    M 600 185
+    Q 620 180, 640 185
+    Q 660 192, 670 205
+    Q 675 220, 665 235
+    Q 650 245, 630 242
+    Q 610 238, 600 225
+    Q 595 210, 600 185
+    Z"/>
+
+  <!-- Australia -->
+  <path fill="url(#watercolor1)" filter="url(#watercolorFilter)" d="
+    M 665 260
+    Q 695 255, 725 262
+    Q 755 270, 770 290
+    Q 778 310, 770 330
+    Q 758 345, 735 350
+    Q 710 352, 685 345
+    Q 665 335, 658 315
+    Q 655 295, 660 275
+    Z"/>
+
+  <!-- New Zealand -->
+  <path fill="url(#watercolor3)" filter="url(#watercolorFilter)" d="
+    M 780 320
+    Q 790 318, 795 328
+    Q 798 345, 790 360
+    Q 782 368, 775 360
+    Q 772 345, 778 330
+    Z"/>
+
+  <!-- Japan -->
+  <path fill="url(#watercolor2)" filter="url(#watercolorFilter)" d="
+    M 705 95
+    Q 715 90, 722 98
+    Q 728 110, 725 125
+    Q 720 135, 710 132
+    Q 702 125, 703 110
+    Z"/>
+
+  <!-- UK/Ireland -->
+  <path fill="url(#watercolor3)" filter="url(#watercolorFilter)" d="
+    M 375 70
+    Q 382 65, 390 70
+    Q 395 78, 392 88
+    Q 385 95, 378 90
+    Q 372 82, 375 70
+    Z"/>
+
+  <!-- Iceland -->
+  <path fill="url(#watercolor1)" filter="url(#watercolorFilter)" d="
+    M 340 45
+    Q 352 42, 360 48
+    Q 365 56, 358 62
+    Q 348 65, 342 58
+    Q 338 52, 340 45
+    Z"/>
+
+  <!-- Madagascar -->
+  <path fill="url(#watercolor2)" filter="url(#watercolorFilter)" d="
+    M 510 285
+    Q 518 280, 525 288
+    Q 530 302, 525 318
+    Q 518 328, 510 322
+    Q 505 308, 510 285
+    Z"/>
+</svg>
