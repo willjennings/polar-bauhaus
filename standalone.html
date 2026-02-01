@@ -103,11 +103,23 @@
   }
 
   class BauhausClock {
-    constructor(canvasId) {
+    constructor(canvasId, options = {}) {
       this.canvas = document.getElementById(canvasId);
       this.ctx = this.canvas.getContext('2d');
       this.canvas.width = WIDTH;
       this.canvas.height = HEIGHT;
+
+      // Tunable settings
+      this.settings = {
+        showMilliseconds: true,
+        showSeconds: true,
+        showHours: true,
+        msColor: null,
+        secColor: null,
+        hourColor: null,
+        useTimeColors: true,
+        ...options
+      };
 
       const userTz = getUserTimezone();
       const localCity = CITIES.find(c => c.tz === userTz) || CITIES.find(c => c.name === "New York");
@@ -123,6 +135,21 @@
       this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleClick(e); }, { passive: false });
 
       this.animate(0);
+    }
+
+    updateSettings(newSettings) { this.settings = { ...this.settings, ...newSettings }; }
+    toggleMilliseconds(show) { this.settings.showMilliseconds = show; }
+    toggleSeconds(show) { this.settings.showSeconds = show; }
+    toggleHours(show) { this.settings.showHours = show; }
+    setColors(ms, sec, hour) {
+      this.settings.msColor = ms;
+      this.settings.secColor = sec;
+      this.settings.hourColor = hour;
+      this.settings.useTimeColors = false;
+    }
+    useTimeOfDayColors() {
+      this.settings.useTimeColors = true;
+      this.settings.msColor = this.settings.secColor = this.settings.hourColor = null;
     }
 
     getCanvasCoords(e) {
@@ -188,88 +215,67 @@
     }
 
     drawBauhausAbstract(ctx, centerX, centerY, time) {
-      // Spinning overlapping circles - ms, seconds, hours
       ctx.save();
       ctx.translate(centerX, centerY);
 
-      // Time-of-day color palettes
-      const hour = time.hours;
       let color1, color2, color3;
-
-      if (hour >= 5 && hour < 8) {
-        color1 = '#E57373'; color2 = '#FFB74D'; color3 = '#2D2D2D';
-      } else if (hour >= 8 && hour < 17) {
-        color1 = '#C41E3A'; color2 = '#D4C36A'; color3 = COLORS.black;
-      } else if (hour >= 17 && hour < 20) {
-        color1 = '#E64A19'; color2 = '#7E57C2'; color3 = '#1A1A2E';
-      } else {
-        color1 = '#1E88E5'; color2 = '#26A69A'; color3 = '#0D1B2A';
+      if (this.settings.useTimeColors) {
+        const hour = time.hours;
+        if (hour >= 5 && hour < 8) {
+          color1 = '#E57373'; color2 = '#FFB74D'; color3 = '#2D2D2D';
+        } else if (hour >= 8 && hour < 17) {
+          color1 = '#C41E3A'; color2 = '#D4C36A'; color3 = COLORS.black;
+        } else if (hour >= 17 && hour < 20) {
+          color1 = '#E64A19'; color2 = '#7E57C2'; color3 = '#1A1A2E';
+        } else {
+          color1 = '#1E88E5'; color2 = '#26A69A'; color3 = '#0D1B2A';
+        }
       }
+      color1 = this.settings.msColor || color1 || '#C41E3A';
+      color2 = this.settings.secColor || color2 || '#D4C36A';
+      color3 = this.settings.hourColor || color3 || COLORS.black;
 
       const msProgress = time.ms / 1000;
       const secProgress = (time.seconds + msProgress) / 60;
       const hourProgress = ((time.hours % 12) + time.minutes / 60) / 12;
-
       const msRotation = msProgress * Math.PI * 2;
       const secRotation = secProgress * Math.PI * 2;
       const hourRotation = hourProgress * Math.PI * 2;
-
       const hourRadius = 85, secRadius = 55, msRadius = 30, strokeWidth = 18;
 
-      // Hour circle (outermost)
-      ctx.save();
-      ctx.rotate(hourRotation - Math.PI / 2);
-      ctx.beginPath();
-      ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
-      ctx.strokeStyle = color3;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showHours) {
+        ctx.save();
+        ctx.rotate(hourRotation - Math.PI / 2);
+        ctx.beginPath(); ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = strokeWidth; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
+        ctx.strokeStyle = color3; ctx.lineWidth = strokeWidth; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.restore();
+      }
 
-      // Seconds circle (middle)
-      ctx.save();
-      ctx.rotate(secRotation - Math.PI / 2);
-      ctx.beginPath();
-      ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
-      ctx.strokeStyle = color2;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showSeconds) {
+        ctx.save();
+        ctx.rotate(secRotation - Math.PI / 2);
+        ctx.beginPath(); ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = strokeWidth; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
+        ctx.strokeStyle = color2; ctx.lineWidth = strokeWidth; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.restore();
+      }
 
-      // Milliseconds circle (innermost)
-      ctx.save();
-      ctx.rotate(msRotation - Math.PI / 2);
-      ctx.beginPath();
-      ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
-      ctx.strokeStyle = color1;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showMilliseconds) {
+        ctx.save();
+        ctx.rotate(msRotation - Math.PI / 2);
+        ctx.beginPath(); ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = strokeWidth; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
+        ctx.strokeStyle = color1; ctx.lineWidth = strokeWidth; ctx.lineCap = 'round'; ctx.stroke();
+        ctx.restore();
+      }
 
-      // Center dot
-      ctx.beginPath();
-      ctx.arc(0, 0, 8, 0, Math.PI * 2);
-      ctx.fillStyle = color1;
-      ctx.fill();
-
+      const dotColor = this.settings.showMilliseconds ? color1 : this.settings.showSeconds ? color2 : color3;
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fillStyle = dotColor; ctx.fill();
       ctx.restore();
     }
 

@@ -81,11 +81,29 @@
   }
 
   class BauhausClock {
-    constructor(canvasId) {
+    constructor(canvasId, options = {}) {
       this.canvas = document.getElementById(canvasId);
       this.ctx = this.canvas.getContext('2d');
       this.canvas.width = WIDTH;
       this.canvas.height = HEIGHT;
+
+      // Tunable settings with defaults
+      this.settings = {
+        // Circle visibility toggles
+        showMilliseconds: true,
+        showSeconds: true,
+        showHours: true,
+
+        // Custom colors (null = use time-of-day colors)
+        msColor: null,
+        secColor: null,
+        hourColor: null,
+
+        // Use time-of-day adaptive colors
+        useTimeColors: true,
+
+        ...options
+      };
 
       // Get user's local timezone city or default
       const userTz = getUserTimezone();
@@ -101,11 +119,37 @@
       this.mapLoaded = false;
       this.lastFrameTime = 0;
 
-      // Animation state for interlocking bars
+      // Animation state
       this.lastSecond = -1;
-      this.tickPulse = 0;  // Pulse animation on second change
+      this.tickPulse = 0;
 
       this.init();
+    }
+
+    // Update settings dynamically
+    updateSettings(newSettings) {
+      this.settings = { ...this.settings, ...newSettings };
+    }
+
+    // Toggle individual circles
+    toggleMilliseconds(show) { this.settings.showMilliseconds = show; }
+    toggleSeconds(show) { this.settings.showSeconds = show; }
+    toggleHours(show) { this.settings.showHours = show; }
+
+    // Set custom colors
+    setColors(msColor, secColor, hourColor) {
+      this.settings.msColor = msColor;
+      this.settings.secColor = secColor;
+      this.settings.hourColor = hourColor;
+      this.settings.useTimeColors = false;
+    }
+
+    // Reset to time-of-day colors
+    useTimeOfDayColors() {
+      this.settings.useTimeColors = true;
+      this.settings.msColor = null;
+      this.settings.secColor = null;
+      this.settings.hourColor = null;
     }
 
     init() {
@@ -311,31 +355,39 @@
       ctx.save();
       ctx.translate(centerX, centerY);
 
-      // Time-of-day color palettes
-      const hour = time.hours;
+      // Determine colors based on settings
       let color1, color2, color3;
 
-      if (hour >= 5 && hour < 8) {
-        // Dawn - soft oranges, pinks
-        color1 = '#E57373';
-        color2 = '#FFB74D';
-        color3 = '#2D2D2D';
-      } else if (hour >= 8 && hour < 17) {
-        // Day - bold primary colors
-        color1 = '#C41E3A';
-        color2 = '#D4C36A';
-        color3 = COLORS.black;
-      } else if (hour >= 17 && hour < 20) {
-        // Dusk - purples, warm oranges
-        color1 = '#E64A19';
-        color2 = '#7E57C2';
-        color3 = '#1A1A2E';
-      } else {
-        // Night - deep blues, teals
-        color1 = '#1E88E5';
-        color2 = '#26A69A';
-        color3 = '#0D1B2A';
+      if (this.settings.useTimeColors) {
+        // Time-of-day color palettes
+        const hour = time.hours;
+        if (hour >= 5 && hour < 8) {
+          // Dawn - soft oranges, pinks
+          color1 = '#E57373';
+          color2 = '#FFB74D';
+          color3 = '#2D2D2D';
+        } else if (hour >= 8 && hour < 17) {
+          // Day - bold primary colors
+          color1 = '#C41E3A';
+          color2 = '#D4C36A';
+          color3 = COLORS.black;
+        } else if (hour >= 17 && hour < 20) {
+          // Dusk - purples, warm oranges
+          color1 = '#E64A19';
+          color2 = '#7E57C2';
+          color3 = '#1A1A2E';
+        } else {
+          // Night - deep blues, teals
+          color1 = '#1E88E5';
+          color2 = '#26A69A';
+          color3 = '#0D1B2A';
+        }
       }
+
+      // Override with custom colors if set
+      color1 = this.settings.msColor || color1 || '#C41E3A';
+      color2 = this.settings.secColor || color2 || '#D4C36A';
+      color3 = this.settings.hourColor || color3 || COLORS.black;
 
       // Calculate progress for each layer (0 to 1)
       const msProgress = time.ms / 1000;
@@ -354,63 +406,72 @@
       const strokeWidth = 18;
 
       // Draw hour circle (outermost) - completes every 12 hours
-      ctx.save();
-      ctx.rotate(hourRotation - Math.PI / 2);
-      // Background track
-      ctx.beginPath();
-      ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      // Progress arc
-      ctx.beginPath();
-      ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
-      ctx.strokeStyle = color3;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showHours) {
+        ctx.save();
+        ctx.rotate(hourRotation - Math.PI / 2);
+        // Background track
+        ctx.beginPath();
+        ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+        // Progress arc
+        ctx.beginPath();
+        ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
+        ctx.strokeStyle = color3;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Draw seconds circle (middle) - completes every 60 seconds
-      ctx.save();
-      ctx.rotate(secRotation - Math.PI / 2);
-      // Background track
-      ctx.beginPath();
-      ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      // Progress arc
-      ctx.beginPath();
-      ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
-      ctx.strokeStyle = color2;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showSeconds) {
+        ctx.save();
+        ctx.rotate(secRotation - Math.PI / 2);
+        // Background track
+        ctx.beginPath();
+        ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+        // Progress arc
+        ctx.beginPath();
+        ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Draw milliseconds circle (innermost) - completes every second
-      ctx.save();
-      ctx.rotate(msRotation - Math.PI / 2);
-      // Background track
-      ctx.beginPath();
-      ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-      ctx.lineWidth = strokeWidth;
-      ctx.stroke();
-      // Progress arc
-      ctx.beginPath();
-      ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
-      ctx.strokeStyle = color1;
-      ctx.lineWidth = strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.restore();
+      if (this.settings.showMilliseconds) {
+        ctx.save();
+        ctx.rotate(msRotation - Math.PI / 2);
+        // Background track
+        ctx.beginPath();
+        ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+        // Progress arc
+        ctx.beginPath();
+        ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
+        ctx.strokeStyle = color1;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.restore();
+      }
 
-      // Center dot
+      // Center dot (use first visible color)
+      const dotColor = this.settings.showMilliseconds ? color1 :
+                       this.settings.showSeconds ? color2 :
+                       this.settings.showHours ? color3 : COLORS.black;
       ctx.beginPath();
       ctx.arc(0, 0, 8, 0, Math.PI * 2);
-      ctx.fillStyle = color1;
+      ctx.fillStyle = dotColor;
       ctx.fill();
 
       ctx.restore();
