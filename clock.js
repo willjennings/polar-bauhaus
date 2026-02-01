@@ -305,75 +305,112 @@
     }
 
     drawBauhausAbstract(ctx, centerX, centerY, time) {
-      // Recreate the exact Bauhaus abstract from the reference image
-      // Rotates smoothly based on seconds
-      const rotation = ((time.seconds + time.ms / 1000) / 60) * Math.PI * 2;
+      // Spinning overlapping circles - ms, seconds, hours
+      // Each fills to 100% when reaching full unit
 
       ctx.save();
       ctx.translate(centerX, centerY);
-      ctx.rotate(rotation);
-
-      const scale = 1.1; // Scale factor for the design
 
       // Time-of-day color palettes
       const hour = time.hours;
-      let barColor, accentColor, secondaryColor;
+      let color1, color2, color3;
 
       if (hour >= 5 && hour < 8) {
         // Dawn - soft oranges, pinks
-        barColor = '#2D2D2D';
-        accentColor = '#E57373';  // Soft red/pink
-        secondaryColor = '#FFB74D';  // Warm orange
+        color1 = '#E57373';
+        color2 = '#FFB74D';
+        color3 = '#2D2D2D';
       } else if (hour >= 8 && hour < 17) {
-        // Day - bold primary colors (original)
-        barColor = COLORS.black;
-        accentColor = '#C41E3A';  // Bold red
-        secondaryColor = '#D4C36A';  // Cream/yellow
+        // Day - bold primary colors
+        color1 = '#C41E3A';
+        color2 = '#D4C36A';
+        color3 = COLORS.black;
       } else if (hour >= 17 && hour < 20) {
         // Dusk - purples, warm oranges
-        barColor = '#1A1A2E';
-        accentColor = '#E64A19';  // Deep orange
-        secondaryColor = '#7E57C2';  // Purple
+        color1 = '#E64A19';
+        color2 = '#7E57C2';
+        color3 = '#1A1A2E';
       } else {
         // Night - deep blues, teals
-        barColor = '#0D1B2A';
-        accentColor = '#1E88E5';  // Blue
-        secondaryColor = '#26A69A';  // Teal
+        color1 = '#1E88E5';
+        color2 = '#26A69A';
+        color3 = '#0D1B2A';
       }
 
-      // Layer 1: Black vertical bar (behind others at bottom)
-      ctx.fillStyle = barColor;
-      ctx.fillRect(-12 * scale, 10 * scale, 24 * scale, 70 * scale);
+      // Calculate progress for each layer (0 to 1)
+      const msProgress = time.ms / 1000;
+      const secProgress = (time.seconds + msProgress) / 60;
+      const hourProgress = ((time.hours % 12) + time.minutes / 60) / 12;
 
-      // Layer 2: Secondary color L-shape
-      ctx.fillStyle = secondaryColor;
-      // Vertical part
-      ctx.fillRect(-45 * scale, -30 * scale, 22 * scale, 90 * scale);
-      // Horizontal part
-      ctx.fillRect(-45 * scale, 38 * scale, 70 * scale, 22 * scale);
+      // Rotation based on time for dynamic spinning effect
+      const msRotation = msProgress * Math.PI * 2;
+      const secRotation = secProgress * Math.PI * 2;
+      const hourRotation = hourProgress * Math.PI * 2;
 
-      // Layer 3: Accent horizontal bar
-      ctx.fillStyle = accentColor;
-      ctx.fillRect(-20 * scale, -5 * scale, 85 * scale, 28 * scale);
+      // Circle sizes
+      const hourRadius = 85;
+      const secRadius = 55;
+      const msRadius = 30;
+      const strokeWidth = 18;
 
-      // Layer 4: Bar color horizontal bar at bottom
-      ctx.fillStyle = barColor;
-      ctx.fillRect(-30 * scale, 55 * scale, 75 * scale, 18 * scale);
-
-      // Layer 5: Bar color section going up from ring
-      ctx.fillStyle = barColor;
-      ctx.fillRect(-12 * scale, -75 * scale, 24 * scale, 50 * scale);
-
-      // Layer 6: The ring (dark outer, white inner)
+      // Draw hour circle (outermost) - completes every 12 hours
+      ctx.save();
+      ctx.rotate(hourRotation - Math.PI / 2);
+      // Background track
       ctx.beginPath();
-      ctx.arc(0, -50 * scale, 32 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = barColor;
-      ctx.fill();
-
-      // Inner white circle (hole)
+      ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+      // Progress arc
       ctx.beginPath();
-      ctx.arc(0, -50 * scale, 16 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.white;
+      ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
+      ctx.strokeStyle = color3;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw seconds circle (middle) - completes every 60 seconds
+      ctx.save();
+      ctx.rotate(secRotation - Math.PI / 2);
+      // Background track
+      ctx.beginPath();
+      ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+      // Progress arc
+      ctx.beginPath();
+      ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
+      ctx.strokeStyle = color2;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw milliseconds circle (innermost) - completes every second
+      ctx.save();
+      ctx.rotate(msRotation - Math.PI / 2);
+      // Background track
+      ctx.beginPath();
+      ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+      // Progress arc
+      ctx.beginPath();
+      ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
+      ctx.strokeStyle = color1;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.restore();
+
+      // Center dot
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color1;
       ctx.fill();
 
       ctx.restore();
