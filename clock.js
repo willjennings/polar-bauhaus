@@ -315,39 +315,59 @@
 
       const scale = 1.1; // Scale factor for the design
 
-      // Colors matching the reference
-      const black = COLORS.black;
-      const red = '#C41E3A';  // Slightly darker red like the image
-      const cream = '#D4C36A'; // Muted yellow/cream
+      // Time-of-day color palettes
+      const hour = time.hours;
+      let barColor, accentColor, secondaryColor;
+
+      if (hour >= 5 && hour < 8) {
+        // Dawn - soft oranges, pinks
+        barColor = '#2D2D2D';
+        accentColor = '#E57373';  // Soft red/pink
+        secondaryColor = '#FFB74D';  // Warm orange
+      } else if (hour >= 8 && hour < 17) {
+        // Day - bold primary colors (original)
+        barColor = COLORS.black;
+        accentColor = '#C41E3A';  // Bold red
+        secondaryColor = '#D4C36A';  // Cream/yellow
+      } else if (hour >= 17 && hour < 20) {
+        // Dusk - purples, warm oranges
+        barColor = '#1A1A2E';
+        accentColor = '#E64A19';  // Deep orange
+        secondaryColor = '#7E57C2';  // Purple
+      } else {
+        // Night - deep blues, teals
+        barColor = '#0D1B2A';
+        accentColor = '#1E88E5';  // Blue
+        secondaryColor = '#26A69A';  // Teal
+      }
 
       // Layer 1: Black vertical bar (behind others at bottom)
-      ctx.fillStyle = black;
+      ctx.fillStyle = barColor;
       ctx.fillRect(-12 * scale, 10 * scale, 24 * scale, 70 * scale);
 
-      // Layer 2: Cream/yellow L-shape
-      ctx.fillStyle = cream;
+      // Layer 2: Secondary color L-shape
+      ctx.fillStyle = secondaryColor;
       // Vertical part
       ctx.fillRect(-45 * scale, -30 * scale, 22 * scale, 90 * scale);
       // Horizontal part
       ctx.fillRect(-45 * scale, 38 * scale, 70 * scale, 22 * scale);
 
-      // Layer 3: Red horizontal bar
-      ctx.fillStyle = red;
+      // Layer 3: Accent horizontal bar
+      ctx.fillStyle = accentColor;
       ctx.fillRect(-20 * scale, -5 * scale, 85 * scale, 28 * scale);
 
-      // Layer 4: Black horizontal bar at bottom
-      ctx.fillStyle = black;
+      // Layer 4: Bar color horizontal bar at bottom
+      ctx.fillStyle = barColor;
       ctx.fillRect(-30 * scale, 55 * scale, 75 * scale, 18 * scale);
 
-      // Layer 5: Black curved section going up-left from ring
-      ctx.fillStyle = black;
+      // Layer 5: Bar color section going up from ring
+      ctx.fillStyle = barColor;
       ctx.fillRect(-12 * scale, -75 * scale, 24 * scale, 50 * scale);
 
-      // Layer 6: The ring (black donut with white center) - drawn last on top
-      // Outer black circle
+      // Layer 6: The ring (dark outer, white inner)
       ctx.beginPath();
       ctx.arc(0, -50 * scale, 32 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = black;
+      ctx.fillStyle = barColor;
       ctx.fill();
 
       // Inner white circle (hole)

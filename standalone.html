@@ -195,29 +195,52 @@
       ctx.rotate(rotation);
 
       const scale = 1.1;
-      const black = COLORS.black;
-      const red = '#C41E3A';
-      const cream = '#D4C36A';
 
-      ctx.fillStyle = black;
+      // Time-of-day color palettes based on selected city's hour
+      const hour = time.hours;
+      let barColor, accentColor, secondaryColor;
+
+      if (hour >= 5 && hour < 8) {
+        // Dawn - soft oranges, pinks
+        barColor = '#2D2D2D';
+        accentColor = '#E57373';
+        secondaryColor = '#FFB74D';
+      } else if (hour >= 8 && hour < 17) {
+        // Day - bold primary colors
+        barColor = COLORS.black;
+        accentColor = '#C41E3A';
+        secondaryColor = '#D4C36A';
+      } else if (hour >= 17 && hour < 20) {
+        // Dusk - purples, warm oranges
+        barColor = '#1A1A2E';
+        accentColor = '#E64A19';
+        secondaryColor = '#7E57C2';
+      } else {
+        // Night - deep blues, teals
+        barColor = '#0D1B2A';
+        accentColor = '#1E88E5';
+        secondaryColor = '#26A69A';
+      }
+
+      ctx.fillStyle = barColor;
       ctx.fillRect(-12 * scale, 10 * scale, 24 * scale, 70 * scale);
 
-      ctx.fillStyle = cream;
+      ctx.fillStyle = secondaryColor;
       ctx.fillRect(-45 * scale, -30 * scale, 22 * scale, 90 * scale);
       ctx.fillRect(-45 * scale, 38 * scale, 70 * scale, 22 * scale);
 
-      ctx.fillStyle = red;
+      ctx.fillStyle = accentColor;
       ctx.fillRect(-20 * scale, -5 * scale, 85 * scale, 28 * scale);
 
-      ctx.fillStyle = black;
+      ctx.fillStyle = barColor;
       ctx.fillRect(-30 * scale, 55 * scale, 75 * scale, 18 * scale);
 
-      ctx.fillStyle = black;
+      ctx.fillStyle = barColor;
       ctx.fillRect(-12 * scale, -75 * scale, 24 * scale, 50 * scale);
 
       ctx.beginPath();
       ctx.arc(0, -50 * scale, 32 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = black;
+      ctx.fillStyle = barColor;
       ctx.fill();
 
       ctx.beginPath();
