@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bauhaus World Clock - Playground</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Futura', 'Avant Garde', 'Helvetica Neue', sans-serif;
+      background: #F5F5F5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #000;
+      color: #FFF;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 11px;
+      letter-spacing: 2px;
+      opacity: 0.7;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    .clock-container {
+      flex: 1;
+      background: #FFF;
+      border: 3px solid #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+    }
+
+    .settings-container {
+      width: 320px;
+      background: #FFF;
+      border: 3px solid #000;
+      overflow-y: auto;
+      max-height: calc(100vh - 140px);
+    }
+
+    .settings-section {
+      padding: 20px;
+      border-bottom: 2px solid #000;
+    }
+
+    .settings-section:last-child {
+      border-bottom: none;
+    }
+
+    .settings-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      color: #000;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .setting-label {
+      width: 90px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .setting-control {
+      flex: 1;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 11px;
+      border: 2px solid #000;
+      background: #FFF;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      background: #F0F0F0;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 4px;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 2px solid #000;
+      background: #FFF;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .btn:hover {
+      background: #F0F0F0;
+    }
+
+    .btn.active {
+      background: #000;
+      color: #FFF;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 28px;
+      height: 28px;
+      border: 2px solid #000;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .swatch.active {
+      outline: 3px solid #DE0100;
+      outline-offset: 2px;
+    }
+
+    .zones-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .zone-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 500;
+      background: #000;
+      color: #FFF;
+      border: none;
+    }
+
+    .zone-tag button {
+      background: none;
+      border: none;
+      color: #FFF;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .zone-tag button:hover {
+      color: #DE0100;
+    }
+
+    .add-zone {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .add-zone select {
+      flex: 1;
+    }
+
+    .add-zone button {
+      padding: 8px 16px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      border: 2px solid #000;
+      background: #000;
+      color: #FFF;
+      cursor: pointer;
+    }
+
+    footer {
+      background: #000;
+      color: #FFF;
+      padding: 15px 40px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 800px) {
+      main {
+        flex-direction: column;
+      }
+      .settings-container {
+        width: 100%;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Bauhaus World Clock</h1>
+      <p class="subtitle">Constraint-based design framework</p>
+    </div>
+    <div class="subtitle">PLAYGROUND</div>
+  </header>
+
+  <main>
+    <div class="clock-container" id="clock"></div>
+
+    <div class="settings-container">
+      <div class="settings-section">
+        <div class="settings-title">Theme</div>
+        <div class="setting-row">
+          <span class="setting-label">Palette</span>
+          <div class="setting-control">
+            <select id="palette">
+              <option value="mondrian">Mondrian</option>
+              <option value="kandinsky">Kandinsky</option>
+              <option value="albers">Albers</option>
+              <option value="klee">Klee</option>
+              <option value="bayer">Bayer</option>
+              <option value="moholy">Moholy-Nagy</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Weight</span>
+          <div class="setting-control button-group">
+            <button class="btn" data-weight="thin">Thin</button>
+            <button class="btn active" data-weight="medium">Med</button>
+            <button class="btn" data-weight="bold">Bold</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Mode</span>
+          <div class="setting-control button-group">
+            <button class="btn active" data-bg="light">Light</button>
+            <button class="btn" data-bg="dark">Dark</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">Clock</div>
+        <div class="setting-row">
+          <span class="setting-label">Face</span>
+          <div class="setting-control button-group">
+            <button class="btn active" data-face="circle">○</button>
+            <button class="btn" data-face="square">□</button>
+            <button class="btn" data-face="none">—</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Markers</span>
+          <div class="setting-control">
+            <select id="markers">
+              <option value="line">Lines</option>
+              <option value="dot">Dots</option>
+              <option value="triangle">Triangles</option>
+              <option value="square">Squares</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Count</span>
+          <div class="setting-control button-group">
+            <button class="btn" data-count="4">4</button>
+            <button class="btn active" data-count="12">12</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">Layout</div>
+        <div class="setting-row">
+          <span class="setting-label">Columns</span>
+          <div class="setting-control button-group">
+            <button class="btn" data-cols="1">1</button>
+            <button class="btn" data-cols="2">2</button>
+            <button class="btn active" data-cols="3">3</button>
+            <button class="btn" data-cols="4">4</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Hierarchy</span>
+          <div class="setting-control">
+            <select id="hierarchy">
+              <option value="equal">Equal</option>
+              <option value="primary">Primary</option>
+              <option value="cascade">Cascade</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">Timezones</div>
+        <div class="zones-list" id="zones-list"></div>
+        <div class="add-zone">
+          <select id="zone-select">
+            <option value="">Add timezone...</option>
+            <option value="America/New_York">New York</option>
+            <option value="America/Los_Angeles">Los Angeles</option>
+            <option value="America/Chicago">Chicago</option>
+            <option value="Europe/London">London</option>
+            <option value="Europe/Paris">Paris</option>
+            <option value="Europe/Berlin">Berlin</option>
+            <option value="Europe/Moscow">Moscow</option>
+            <option value="Asia/Tokyo">Tokyo</option>
+            <option value="Asia/Shanghai">Shanghai</option>
+            <option value="Asia/Dubai">Dubai</option>
+            <option value="Asia/Singapore">Singapore</option>
+            <option value="Australia/Sydney">Sydney</option>
+          </select>
+          <button id="add-zone-btn">+</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>BAUHAUS WORLD CLOCK FRAMEWORK v0.1.0</span>
+    <span>© 2024 MIT LICENSE</span>
+  </footer>
+
+  <script type="module">
+    import { createWorldClock } from '../src/components/WorldClock.js';
+    import { Config } from '../src/core/Config.js';
+    import { getTimezoneInfo } from '../src/core/ClockEngine.js';
+
+    // State
+    let config = {
+      theme: { palette: 'mondrian', weight: 'medium', background: 'light' },
+      clock: { face: 'circle', markers: { style: 'line', count: 12 } },
+      layout: { columns: 3, hierarchy: 'equal' }
+    };
+    let zones = ['local', 'Europe/London', 'Asia/Tokyo'];
+
+    // Render function
+    function render() {
+      const container = document.getElementById('clock');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      container.innerHTML = createWorldClock({
+        zones,
+        width,
+        height,
+        config
+      });
+    }
+
+    // Update zones list
+    function updateZonesList() {
+      const list = document.getElementById('zones-list');
+      list.innerHTML = zones.map(zone => {
+        const info = getTimezoneInfo(zone);
+        return `
+          <div class="zone-tag">
+            <span>${info.city}</span>
+            <button data-remove="${zone}">×</button>
+          </div>
+        `;
+      }).join('');
+
+      // Add remove handlers
+      list.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const zone = btn.dataset.remove;
+          zones = zones.filter(z => z !== zone);
+          updateZonesList();
+          render();
+        });
+      });
+    }
+
+    // Initialize
+    render();
+    updateZonesList();
+
+    // Animation loop
+    setInterval(render, 1000);
+
+    // Event handlers
+    document.getElementById('palette').addEventListener('change', (e) => {
+      config.theme.palette = e.target.value;
+      render();
+    });
+
+    document.querySelectorAll('[data-weight]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-weight]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        config.theme.weight = btn.dataset.weight;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-bg]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        config.theme.background = btn.dataset.bg;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-face]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-face]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        config.clock.face = btn.dataset.face;
+        render();
+      });
+    });
+
+    document.getElementById('markers').addEventListener('change', (e) => {
+      config.clock.markers.style = e.target.value;
+      render();
+    });
+
+    document.querySelectorAll('[data-count]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-count]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        config.clock.markers.count = parseInt(btn.dataset.count);
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-cols]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-cols]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        config.layout.columns = parseInt(btn.dataset.cols);
+        render();
+      });
+    });
+
+    document.getElementById('hierarchy').addEventListener('change', (e) => {
+      config.layout.hierarchy = e.target.value;
+      render();
+    });
+
+    document.getElementById('add-zone-btn').addEventListener('click', () => {
+      const select = document.getElementById('zone-select');
+      const zone = select.value;
+      if (zone && !zones.includes(zone)) {
+        zones.push(zone);
+        updateZonesList();
+        render();
+      }
+      select.value = '';
+    });
+
+    // Handle resize
+    window.addEventListener('resize', render);
+  </script>
+</body>
+</html>
