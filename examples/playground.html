@@ -371,7 +371,7 @@
   </footer>
 
   <script type="module">
-    import { createWorldClock } from '../src/components/WorldClock.js';
+    import { createWorldClock, updateClockHands } from '../src/components/WorldClock.js';
     import { Config } from '../src/core/Config.js';
     import { getTimezoneInfo } from '../src/core/ClockEngine.js';
 
@@ -382,8 +382,9 @@
       layout: { columns: 3, hierarchy: 'equal' }
     };
     let zones = ['local', 'Europe/London', 'Asia/Tokyo'];
+    let prevAngles = {};
 
-    // Render function
+    // Full render function (only for initial render and config changes)
     function render() {
       const container = document.getElementById('clock');
       const width = container.clientWidth;
@@ -395,6 +396,15 @@
         height,
         config
       });
+
+      // Reset previous angles after full render
+      prevAngles = {};
+    }
+
+    // Differential update function (for smooth animation)
+    function updateHands() {
+      const container = document.getElementById('clock');
+      prevAngles = updateClockHands(container, zones, prevAngles);
     }
 
     // Update zones list
@@ -425,8 +435,9 @@
     render();
     updateZonesList();
 
-    // Animation loop
-    setInterval(render, 1000);
+    // Animation loop - differential updates for smooth motion
+    // Update every 100ms for smooth second hand, CSS handles the interpolation
+    setInterval(updateHands, 100);
 
     // Event handlers
     document.getElementById('palette').addEventListener('change', (e) => {

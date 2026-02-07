@@ -8,9 +8,9 @@
 
 import { calculateGrid, getResponsiveColumns, enforceMinimumSize } from './Grid.js';
 import { createSingleClock } from './SingleClock.js';
-import { getHandAnimationCSS } from './Hand.js';
+import { getHandAnimationCSS, getSmartRotation } from './Hand.js';
 import { Config } from '../core/Config.js';
-import { getTimeForZone } from '../core/ClockEngine.js';
+import { getTimeForZone, getHandAngles } from '../core/ClockEngine.js';
 
 /**
  * Create a multi-timezone world clock SVG
@@ -88,6 +88,71 @@ export function createWorldClock({
 }
 
 /**
+ * Update clock hands in an existing SVG without rebuilding the DOM
+ * This is the key to smooth animation - only update transform attributes
+ * @param {HTMLElement} container - Container with the SVG
+ * @param {string[]} zones - Array of timezone strings
+ * @param {Object} [prevAngles] - Previous angles for wrap-around detection
+ * @returns {Object} Current angles for next update
+ */
+export function updateClockHands(container, zones, prevAngles = {}) {
+  const svg = container.querySelector('.bauhaus-world-clock');
+  if (!svg) return prevAngles;
+
+  const currentAngles = {};
+
+  zones.forEach(zone => {
+    const zoneId = zone.replace(/\//g, '-');
+    const clockGroup = svg.querySelector(`#clock-${zoneId}`);
+    if (!clockGroup) return;
+
+    // Get current time for this zone
+    const time = getTimeForZone(zone);
+    const angles = getHandAngles(time, true);
+
+    // Store current angles
+    currentAngles[zone] = angles;
+
+    // Update each hand
+    ['hour', 'minute', 'second'].forEach(type => {
+      const hand = clockGroup.querySelector(`#hand-${type}`);
+      if (!hand) return;
+
+      const newAngle = angles[type];
+      const prevAngle = prevAngles[zone]?.[type] ?? newAngle;
+
+      // Check if we need to jump (wrap-around case)
+      const { needsJump } = getSmartRotation(prevAngle, newAngle);
+
+      if (needsJump) {
+        // Disable transition, set angle, re-enable transition
+        hand.classList.add('no-transition');
+        // Force reflow to apply the class
+        hand.offsetHeight;
+      }
+
+      // Extract cx, cy from current transform
+      const currentTransform = hand.getAttribute('transform') || '';
+      const match = currentTransform.match(/rotate\([\d.-]+\s+([\d.-]+)\s+([\d.-]+)\)/);
+      const cx = match ? match[1] : '0';
+      const cy = match ? match[2] : '0';
+
+      // Update the transform
+      hand.setAttribute('transform', `rotate(${newAngle} ${cx} ${cy})`);
+
+      if (needsJump) {
+        // Re-enable transition after a frame
+        requestAnimationFrame(() => {
+          hand.classList.remove('no-transition');
+        });
+      }
+    });
+  });
+
+  return currentAngles;
+}
+
+/**
  * WorldClock class for interactive use
  */
 export class WorldClock {
@@ -108,6 +173,8 @@ export class WorldClock {
     this._running = false;
     this._animationId = null;
     this._eventHandlers = {};
+    this._prevAngles = {};
+    this._lastSecond = -1;
 
     this._render();
     this.start();
@@ -128,12 +195,13 @@ export class WorldClock {
   }
 
   /**
-   * Animation loop
+   * Animation loop - uses differential updates for smooth animation
    */
   _tick() {
     if (!this._running) return;
 
-    this._render();
+    // Use differential update instead of full re-render
+    this._prevAngles = updateClockHands(this.container, this.zones, this._prevAngles);
 
     // Emit tick event with current times
     const times = this.zones.map(zone => ({
@@ -142,7 +210,10 @@ export class WorldClock {
     }));
     this._emit('tick', { times });
 
-    this._animationId = requestAnimationFrame(() => this._tick());
+    // Update once per second for efficiency (CSS handles smooth transitions)
+    this._animationId = setTimeout(() => {
+      requestAnimationFrame(() => this._tick());
+    }, 100); // Update 10 times per second for smooth second hand
   }
 
   /**
@@ -161,7 +232,7 @@ export class WorldClock {
   stop() {
     this._running = false;
     if (this._animationId) {
-      cancelAnimationFrame(this._animationId);
+      clearTimeout(this._animationId);
       this._animationId = null;
     }
     return this;

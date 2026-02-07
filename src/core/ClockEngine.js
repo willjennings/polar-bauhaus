@@ -124,11 +124,29 @@ function getTimeForZone(timezone = 'local') {
       timestamp: now.getTime()
     };
   } catch (e) {
-    // Fallback to offset calculation
+    // Fallback to offset calculation (rare - only if Intl fails)
     const zoneData = TIMEZONE_DATA[timezone];
     if (zoneData) {
+      let offset = zoneData.offset;
+
+      // Attempt DST correction for zones that observe it
+      if (zoneData.dst) {
+        // Use a heuristic: check if we're in northern or southern hemisphere DST period
+        // Northern: roughly March-November, Southern: roughly October-April
+        const month = now.getMonth(); // 0-11
+
+        // Northern hemisphere DST (US/Europe rules approximation)
+        const isNorthernHemisphere = offset < 10; // Rough: Australia/NZ have offset >= 10
+        const inNorthernDST = isNorthernHemisphere && month >= 2 && month <= 9; // Mar-Oct
+        const inSouthernDST = !isNorthernHemisphere && (month >= 9 || month <= 2); // Oct-Mar
+
+        if (inNorthernDST || inSouthernDST) {
+          offset += 1; // Add 1 hour for DST
+        }
+      }
+
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const zoneTime = new Date(utc + (zoneData.offset * 3600000));
+      const zoneTime = new Date(utc + (offset * 3600000));
       return {
         hours: zoneTime.getHours(),
         minutes: zoneTime.getMinutes(),

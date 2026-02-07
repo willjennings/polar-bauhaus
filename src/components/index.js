@@ -10,6 +10,7 @@ export {
   createHand,
   createAllHands,
   getHandAnimationCSS,
+  getSmartRotation,
   default as Hand
 } from './Hand.js';
 
@@ -57,6 +58,7 @@ export {
 // World Clock
 export {
   createWorldClock,
+  updateClockHands,
   WorldClock,
   default as WorldClockDefault
 } from './WorldClock.js';

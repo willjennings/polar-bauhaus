@@ -169,14 +169,62 @@ export function createAllHands({
 /**
  * Generate CSS for hand animations
  * Note: We do NOT set transform-origin as it conflicts with SVG transform="rotate(angle cx cy)"
+ * SVG transforms are applied via the transform attribute, and we use CSS transitions to animate them.
  */
 export function getHandAnimationCSS() {
   return `
-/* Minimal styles - SVG transforms handle positioning */
+/* Smooth transitions for clock hands */
 .bauhaus-clock-hand {
-  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Faster transition for second hand - more responsive feel */
+.bauhaus-hand-second {
+  transition: transform 0.15s linear;
+}
+
+/* Disable transitions when hands need to jump (e.g., 359->0 wrap) */
+.bauhaus-clock-hand.no-transition {
+  transition: none !important;
+}
+
+/* Sweeping second hand option - continuous motion */
+.bauhaus-sweep .bauhaus-hand-second {
+  transition: transform 1s linear;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .bauhaus-clock-hand {
+    transition: none;
+  }
 }
 `;
+}
+
+/**
+ * Calculate the shortest rotation path between two angles
+ * Handles the 359->0 wrap-around case
+ * @param {number} from - Current angle
+ * @param {number} to - Target angle
+ * @returns {Object} { angle: number, needsJump: boolean }
+ */
+export function getSmartRotation(from, to) {
+  // Normalize angles to 0-360
+  from = ((from % 360) + 360) % 360;
+  to = ((to % 360) + 360) % 360;
+
+  // Calculate the difference
+  let diff = to - from;
+
+  // If the difference is greater than 180, we're crossing the 0/360 boundary
+  // This happens at the top of the clock (11:59 -> 12:00)
+  if (Math.abs(diff) > 180) {
+    // We need to jump without animation
+    return { angle: to, needsJump: true };
+  }
+
+  return { angle: to, needsJump: false };
 }
 
 export default createHand;
