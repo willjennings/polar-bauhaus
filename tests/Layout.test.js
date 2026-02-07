@@ -169,7 +169,7 @@ describe('WorldClock', () => {
       });
 
       assert.ok(svg.includes('<style>'));
-      assert.ok(svg.includes('.bauhaus-hand'));
+      assert.ok(svg.includes('.bauhaus-clock-hand'));
     });
 
     it('should set viewBox correctly', () => {

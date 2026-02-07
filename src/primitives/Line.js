@@ -149,10 +149,10 @@ export function createHandLine({
     `stroke-linecap="${validCap}"`
   ];
 
-  // Wrap in group with rotation transform for animation
+  // Wrap in group with rotation transform
+  // Note: SVG transform="rotate(angle cx cy)" handles rotation center - no CSS needed
   const groupAttrs = [
-    `transform="rotate(${angle} ${cx} ${cy})"`,
-    `style="transform-origin: ${cx}px ${cy}px"`
+    `transform="rotate(${angle} ${cx} ${cy})"`
   ];
 
   if (id) groupAttrs.push(`id="${id}"`);

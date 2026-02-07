@@ -168,25 +168,13 @@ export function createAllHands({
 
 /**
  * Generate CSS for hand animations
+ * Note: We do NOT set transform-origin as it conflicts with SVG transform="rotate(angle cx cy)"
  */
 export function getHandAnimationCSS() {
   return `
-.bauhaus-hand {
-  transform-origin: center;
-}
-
-.bauhaus-animated {
-  transition: transform 0.1s cubic-bezier(0.4, 2.08, 0.55, 0.44);
-}
-
-.bauhaus-hand-second.bauhaus-animated {
-  transition: transform 0.05s linear;
-}
-
-/* Smooth continuous rotation for second hand */
-@keyframes bauhaus-tick {
-  from { transform: rotate(var(--from-angle)); }
-  to { transform: rotate(var(--to-angle)); }
+/* Minimal styles - SVG transforms handle positioning */
+.bauhaus-clock-hand {
+  will-change: transform;
 }
 `;
 }
