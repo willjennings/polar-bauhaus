@@ -1,0 +1,49 @@
+{
+  "name": "bauhaus-world-clock",
+  "version": "0.1.0",
+  "description": "Bauhaus-inspired world clock framework with constraint-based design",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/index.d.ts"
+    },
+    "./components": "./src/components/index.js",
+    "./primitives": "./src/primitives/index.js",
+    "./themes": "./src/themes/index.js",
+    "./core": {
+      "import": "./src/core/Config.js"
+    }
+  },
+  "files": [
+    "src",
+    "examples"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:watch": "node --test --watch tests/*.test.js",
+    "example": "npx serve ."
+  },
+  "keywords": [
+    "bauhaus",
+    "clock",
+    "world-clock",
+    "timezone",
+    "svg",
+    "design-system",
+    "constraint-based",
+    "analog-clock",
+    "widget"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/willjennings/polar-bauhaus.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
