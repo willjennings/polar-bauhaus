@@ -3,6 +3,7 @@
  * SingleClock Component
  *
  * A complete analog clock with face, hands, and label.
+ * Supports multiple face types via the faces module.
  */
 
 import { ClockCircle } from '../primitives/index.js';
@@ -11,6 +12,7 @@ import { createAllHands, getHandAnimationCSS } from './Hand.js';
 import { createPositionedLabel } from './Label.js';
 import { getTimeForZone } from '../core/ClockEngine.js';
 import { Config } from '../core/Config.js';
+import { getFace, hasFace, getAllFaceCSS } from '../faces/index.js';
 
 /**
  * Create a single complete clock
@@ -19,6 +21,7 @@ import { Config } from '../core/Config.js';
  * @param {number} options.cy - Center Y
  * @param {number} options.radius - Clock radius
  * @param {string} [options.zone] - Timezone (default: 'local')
+ * @param {string} [options.faceType] - Face type (default: 'classic')
  * @param {Object} [options.config] - Configuration object or Config instance
  * @returns {string} SVG group element string
  */
@@ -27,6 +30,7 @@ export function createSingleClock({
   cy,
   radius,
   zone = 'local',
+  faceType = 'classic',
   config = {}
 }) {
   // Normalize config
@@ -39,7 +43,21 @@ export function createSingleClock({
   // Get current time for this zone
   const time = getTimeForZone(zone);
 
-  // Build elements
+  // Check if using a custom face type
+  if (faceType !== 'classic' && hasFace(faceType)) {
+    const face = getFace(faceType);
+    return face.render({
+      cx,
+      cy,
+      radius,
+      time,
+      palette: theme.palette,
+      zone,
+      options: { theme, clock, layout }
+    });
+  }
+
+  // Classic face rendering (original behavior)
   const elements = [];
 
   // Clock face
@@ -134,10 +152,11 @@ export function createStandaloneClock({
   const clock = createSingleClock({
     cx, cy, radius,
     zone,
+    faceType: config.clock?.faceType || 'classic',
     config
   });
 
-  const style = `<style>${getHandAnimationCSS()}</style>`;
+  const style = `<style>${getHandAnimationCSS()}${getAllFaceCSS()}</style>`;
 
   return `<svg
     xmlns="http://www.w3.org/2000/svg"

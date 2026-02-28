@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bauhaus World Clock - Playground</title>
+  <title>Clock Widgets - 12 Faces of Time</title>
   <style>
     * {
       margin: 0;
@@ -12,507 +12,589 @@
     }
 
     body {
-      font-family: 'Futura', 'Avant Garde', 'Helvetica Neue', sans-serif;
-      background: #F5F5F5;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      background: #1C1C1E;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      color: #fff;
     }
 
+    /* Header */
     header {
-      background: #000;
-      color: #FFF;
-      padding: 20px 40px;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 16px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #DE0100 0%, #FAD201 50%, #0000A0 100%);
+      border-radius: 8px;
     }
 
     h1 {
       font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: -0.5px;
     }
 
     .subtitle {
-      font-size: 11px;
-      letter-spacing: 2px;
-      opacity: 0.7;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 2px;
     }
 
-    main {
-      flex: 1;
+    /* Controls */
+    .controls {
       display: flex;
-      padding: 20px;
-      gap: 20px;
-    }
-
-    .clock-container {
-      flex: 1;
-      background: #FFF;
-      border: 3px solid #000;
-      display: flex;
+      gap: 16px;
       align-items: center;
-      justify-content: center;
-      min-height: 400px;
     }
 
-    .settings-container {
-      width: 320px;
-      background: #FFF;
-      border: 3px solid #000;
-      overflow-y: auto;
-      max-height: calc(100vh - 140px);
-    }
-
-    .settings-section {
-      padding: 20px;
-      border-bottom: 2px solid #000;
-    }
-
-    .settings-section:last-child {
-      border-bottom: none;
-    }
-
-    .settings-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 15px;
-      color: #000;
-    }
-
-    .setting-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .setting-label {
-      width: 90px;
-      font-size: 10px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .setting-control {
-      flex: 1;
-    }
-
-    select {
-      width: 100%;
-      padding: 8px 10px;
-      font-family: inherit;
-      font-size: 11px;
-      border: 2px solid #000;
-      background: #FFF;
-      cursor: pointer;
-    }
-
-    select:focus {
-      outline: none;
-      background: #F0F0F0;
-    }
-
-    .button-group {
-      display: flex;
-      gap: 4px;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 8px 4px;
-      font-family: inherit;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border: 2px solid #000;
-      background: #FFF;
-      cursor: pointer;
-      transition: all 0.1s;
-    }
-
-    .btn:hover {
-      background: #F0F0F0;
-    }
-
-    .btn.active {
-      background: #000;
-      color: #FFF;
-    }
-
-    .color-swatches {
+    .palette-swatches {
       display: flex;
       gap: 6px;
     }
 
     .swatch {
-      width: 28px;
-      height: 28px;
-      border: 2px solid #000;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
       cursor: pointer;
-      transition: transform 0.1s;
+      border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
     }
 
     .swatch:hover {
-      transform: scale(1.1);
+      transform: scale(1.15);
     }
 
     .swatch.active {
-      outline: 3px solid #DE0100;
-      outline-offset: 2px;
+      border-color: #fff;
     }
 
-    .zones-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-
-    .zone-tag {
+    .add-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      font-size: 10px;
-      font-weight: 500;
-      background: #000;
-      color: #FFF;
-      border: none;
-    }
-
-    .zone-tag button {
-      background: none;
-      border: none;
-      color: #FFF;
-      cursor: pointer;
-      font-size: 12px;
-      line-height: 1;
-    }
-
-    .zone-tag button:hover {
-      color: #DE0100;
-    }
-
-    .add-zone {
-      display: flex;
       gap: 6px;
-      margin-top: 10px;
+      transition: background 0.15s;
     }
 
-    .add-zone select {
-      flex: 1;
+    .add-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
-    .add-zone button {
-      padding: 8px 16px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: 700;
-      border: 2px solid #000;
-      background: #000;
-      color: #FFF;
+    /* Widget Grid */
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Widget Card */
+    .widget-card {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
       cursor: pointer;
+      position: relative;
     }
 
-    footer {
-      background: #000;
-      color: #FFF;
-      padding: 15px 40px;
-      font-size: 10px;
-      letter-spacing: 1px;
+    .widget-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .widget-clock {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
+    .widget-clock svg {
+      max-width: 100%;
+      max-height: 180px;
+    }
+
+    .widget-info {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
 
-    @media (max-width: 800px) {
-      main {
-        flex-direction: column;
+    .widget-face-name {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .widget-city {
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .widget-time {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Face picker overlay */
+    .face-picker-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .face-picker-overlay.active {
+      display: flex;
+    }
+
+    .face-picker {
+      background: #2C2C2E;
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .face-picker h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .face-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .face-option {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+      text-align: center;
+    }
+
+    .face-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.02);
+    }
+
+    .face-option.selected {
+      background: rgba(222, 1, 0, 0.3);
+      outline: 2px solid #DE0100;
+    }
+
+    .face-option svg {
+      max-width: 100%;
+      height: 80px;
+      margin-bottom: 8px;
+    }
+
+    .face-option-name {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .face-option-era {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 2px;
+    }
+
+    .close-picker {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* Timezone picker modal */
+    .timezone-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timezone-modal.active {
+      display: flex;
+    }
+
+    .timezone-picker {
+      background: #2C2C2E;
+      border-radius: 16px;
+      padding: 24px;
+      width: 320px;
+      max-height: 60vh;
+    }
+
+    .timezone-picker h3 {
+      margin-bottom: 16px;
+    }
+
+    .timezone-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .timezone-option {
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      transition: background 0.15s;
+    }
+
+    .timezone-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 300;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      .widget-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
       }
-      .settings-container {
-        width: 100%;
-        max-height: none;
+
+      .face-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      header {
+        flex-direction: column;
+        gap: 12px;
       }
     }
   </style>
 </head>
 <body>
   <header>
-    <div>
-      <h1>Bauhaus World Clock</h1>
-      <p class="subtitle">Constraint-based design framework</p>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div>
+        <h1>Clock Widgets</h1>
+        <p class="subtitle">12 Faces of Time</p>
+      </div>
     </div>
-    <div class="subtitle">PLAYGROUND</div>
+    <div class="controls">
+      <div class="palette-swatches">
+        <div class="swatch active" data-palette="mondrian" style="background: linear-gradient(135deg, #DE0100, #FAD201, #0000A0);" title="Mondrian"></div>
+        <div class="swatch" data-palette="kandinsky" style="background: linear-gradient(135deg, #E4572E, #17BEBB, #FFC914);" title="Kandinsky"></div>
+        <div class="swatch" data-palette="albers" style="background: linear-gradient(135deg, #C2883A, #8B7355, #D4A84B);" title="Albers"></div>
+        <div class="swatch" data-palette="klee" style="background: linear-gradient(135deg, #8B4513, #2F4F4F, #CD853F);" title="Klee"></div>
+        <div class="swatch" data-palette="bayer" style="background: linear-gradient(135deg, #FF3B30, #007AFF, #FFCC00);" title="Bayer"></div>
+        <div class="swatch" data-palette="moholy" style="background: linear-gradient(135deg, #B8860B, #708090, #C0C0C0);" title="Moholy-Nagy"></div>
+      </div>
+      <button class="add-btn" id="add-clock">
+        <span>+</span> Add Clock
+      </button>
+    </div>
   </header>
 
-  <main>
-    <div class="clock-container" id="clock"></div>
+  <main class="widget-grid" id="widgets"></main>
 
-    <div class="settings-container">
-      <div class="settings-section">
-        <div class="settings-title">Theme</div>
-        <div class="setting-row">
-          <span class="setting-label">Palette</span>
-          <div class="setting-control">
-            <select id="palette">
-              <option value="mondrian">Mondrian</option>
-              <option value="kandinsky">Kandinsky</option>
-              <option value="albers">Albers</option>
-              <option value="klee">Klee</option>
-              <option value="bayer">Bayer</option>
-              <option value="moholy">Moholy-Nagy</option>
-            </select>
-          </div>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Weight</span>
-          <div class="setting-control button-group">
-            <button class="btn" data-weight="thin">Thin</button>
-            <button class="btn active" data-weight="medium">Med</button>
-            <button class="btn" data-weight="bold">Bold</button>
-          </div>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Mode</span>
-          <div class="setting-control button-group">
-            <button class="btn active" data-bg="light">Light</button>
-            <button class="btn" data-bg="dark">Dark</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-title">Clock</div>
-        <div class="setting-row">
-          <span class="setting-label">Face</span>
-          <div class="setting-control button-group">
-            <button class="btn active" data-face="circle">○</button>
-            <button class="btn" data-face="square">□</button>
-            <button class="btn" data-face="none">—</button>
-          </div>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Markers</span>
-          <div class="setting-control">
-            <select id="markers">
-              <option value="line">Lines</option>
-              <option value="dot">Dots</option>
-              <option value="triangle">Triangles</option>
-              <option value="square">Squares</option>
-              <option value="none">None</option>
-            </select>
-          </div>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Count</span>
-          <div class="setting-control button-group">
-            <button class="btn" data-count="4">4</button>
-            <button class="btn active" data-count="12">12</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-title">Layout</div>
-        <div class="setting-row">
-          <span class="setting-label">Columns</span>
-          <div class="setting-control button-group">
-            <button class="btn" data-cols="1">1</button>
-            <button class="btn" data-cols="2">2</button>
-            <button class="btn active" data-cols="3">3</button>
-            <button class="btn" data-cols="4">4</button>
-          </div>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Hierarchy</span>
-          <div class="setting-control">
-            <select id="hierarchy">
-              <option value="equal">Equal</option>
-              <option value="primary">Primary</option>
-              <option value="cascade">Cascade</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-title">Timezones</div>
-        <div class="zones-list" id="zones-list"></div>
-        <div class="add-zone">
-          <select id="zone-select">
-            <option value="">Add timezone...</option>
-            <option value="America/New_York">New York</option>
-            <option value="America/Los_Angeles">Los Angeles</option>
-            <option value="America/Chicago">Chicago</option>
-            <option value="Europe/London">London</option>
-            <option value="Europe/Paris">Paris</option>
-            <option value="Europe/Berlin">Berlin</option>
-            <option value="Europe/Moscow">Moscow</option>
-            <option value="Asia/Tokyo">Tokyo</option>
-            <option value="Asia/Shanghai">Shanghai</option>
-            <option value="Asia/Dubai">Dubai</option>
-            <option value="Asia/Singapore">Singapore</option>
-            <option value="Australia/Sydney">Sydney</option>
-          </select>
-          <button id="add-zone-btn">+</button>
-        </div>
-      </div>
+  <!-- Face picker modal -->
+  <div class="face-picker-overlay" id="face-picker-overlay">
+    <button class="close-picker" onclick="closeFacePicker()">×</button>
+    <div class="face-picker">
+      <h2>Choose a Face</h2>
+      <div class="face-grid" id="face-options"></div>
     </div>
-  </main>
+  </div>
 
-  <footer>
-    <span>BAUHAUS WORLD CLOCK FRAMEWORK v0.1.0</span>
-    <span>© 2024 MIT LICENSE</span>
-  </footer>
+  <!-- Timezone picker modal -->
+  <div class="timezone-modal" id="timezone-modal">
+    <div class="timezone-picker">
+      <h3>Select Timezone</h3>
+      <div class="timezone-list" id="timezone-list"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
   <script type="module">
     import { createWorldClock, updateClockHands } from '../src/components/WorldClock.js';
-    import { Config } from '../src/core/Config.js';
-    import { getTimezoneInfo } from '../src/core/ClockEngine.js';
+    import { createSingleClock } from '../src/components/SingleClock.js';
+    import { getHandAnimationCSS } from '../src/components/Hand.js';
+    import { getAllFaces, getAllFaceCSS, getFaceIds } from '../src/faces/index.js';
+    import { getTimezoneInfo, getTimeForZone, getAvailableTimezones } from '../src/core/ClockEngine.js';
 
     // State
-    let config = {
-      theme: { palette: 'mondrian', weight: 'medium', background: 'light' },
-      clock: { face: 'circle', markers: { style: 'line', count: 12 } },
-      layout: { columns: 3, hierarchy: 'equal' }
-    };
-    let zones = ['local', 'Europe/London', 'Asia/Tokyo'];
-    let prevAngles = {};
+    let widgets = [
+      { zone: 'local', faceType: 'swiss-railway' },
+      { zone: 'Europe/London', faceType: 'braun' },
+      { zone: 'Asia/Tokyo', faceType: 'mondrian' },
+      { zone: 'America/New_York', faceType: 'flip-clock' }
+    ];
+    let currentPalette = 'mondrian';
+    let editingWidgetIndex = null;
 
-    // Full render function (only for initial render and config changes)
+    const faces = getAllFaces();
+    const timezones = [
+      'local', 'America/New_York', 'America/Los_Angeles', 'America/Chicago',
+      'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
+      'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Dubai', 'Asia/Singapore',
+      'Australia/Sydney', 'Pacific/Auckland'
+    ];
+
+    // Render all widgets
     function render() {
-      const container = document.getElementById('clock');
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+      const container = document.getElementById('widgets');
+      container.innerHTML = '';
 
-      container.innerHTML = createWorldClock({
-        zones,
-        width,
-        height,
-        config
+      widgets.forEach((widget, index) => {
+        const card = document.createElement('div');
+        card.className = 'widget-card';
+        card.onclick = () => openFacePicker(index);
+
+        const info = getTimezoneInfo(widget.zone);
+        const time = getTimeForZone(widget.zone);
+        const timeStr = `${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}`;
+        const face = faces.find(f => f.id === widget.faceType) || faces[0];
+
+        // Create clock SVG
+        const clockSvg = createSingleClock({
+          cx: 90,
+          cy: 90,
+          radius: 80,
+          zone: widget.zone,
+          faceType: widget.faceType,
+          config: {
+            theme: { palette: currentPalette, background: 'dark' }
+          }
+        });
+
+        card.innerHTML = `
+          <div class="widget-clock">
+            <svg viewBox="0 0 180 180" width="180" height="180">
+              <style>${getHandAnimationCSS()}${getAllFaceCSS()}</style>
+              ${clockSvg}
+            </svg>
+          </div>
+          <div class="widget-info">
+            <div>
+              <div class="widget-face-name">${face.name}</div>
+              <div class="widget-city">${info.city}</div>
+            </div>
+            <div class="widget-time">${timeStr}</div>
+          </div>
+        `;
+
+        card.dataset.index = index;
+        container.appendChild(card);
+      });
+    }
+
+    // Update clocks every second
+    function updateClocks() {
+      document.querySelectorAll('.widget-card').forEach((card, index) => {
+        const widget = widgets[index];
+        if (!widget) return;
+
+        const time = getTimeForZone(widget.zone);
+        const timeStr = `${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}`;
+        const timeEl = card.querySelector('.widget-time');
+        if (timeEl) timeEl.textContent = timeStr;
+
+        // Update hands
+        const clockGroup = card.querySelector('.bauhaus-single-clock');
+        if (clockGroup) {
+          updateClockHands(card, [widget.zone], {});
+        }
+      });
+    }
+
+    // Face picker
+    function openFacePicker(index) {
+      editingWidgetIndex = index;
+      const overlay = document.getElementById('face-picker-overlay');
+      const grid = document.getElementById('face-options');
+      const currentFace = widgets[index].faceType;
+
+      grid.innerHTML = faces.map(face => `
+        <div class="face-option ${face.id === currentFace ? 'selected' : ''}" data-face="${face.id}">
+          <svg viewBox="0 0 100 100" width="80" height="80">
+            <style>${getHandAnimationCSS()}${getAllFaceCSS()}</style>
+            ${createSingleClock({
+              cx: 50, cy: 50, radius: 40,
+              zone: widgets[index].zone,
+              faceType: face.id,
+              config: { theme: { palette: currentPalette, background: 'dark' } }
+            })}
+          </svg>
+          <div class="face-option-name">${face.name}</div>
+          <div class="face-option-era">${face.era}</div>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      grid.querySelectorAll('.face-option').forEach(option => {
+        option.onclick = () => selectFace(option.dataset.face);
       });
 
-      // Reset previous angles after full render
-      prevAngles = {};
+      overlay.classList.add('active');
     }
 
-    // Differential update function (for smooth animation)
-    function updateHands() {
-      const container = document.getElementById('clock');
-      prevAngles = updateClockHands(container, zones, prevAngles);
+    function closeFacePicker() {
+      document.getElementById('face-picker-overlay').classList.remove('active');
+      editingWidgetIndex = null;
     }
 
-    // Update zones list
-    function updateZonesList() {
-      const list = document.getElementById('zones-list');
-      list.innerHTML = zones.map(zone => {
-        const info = getTimezoneInfo(zone);
+    function selectFace(faceId) {
+      if (editingWidgetIndex !== null) {
+        widgets[editingWidgetIndex].faceType = faceId;
+        render();
+        closeFacePicker();
+        showToast(`Face changed to ${faces.find(f => f.id === faceId).name}`);
+      }
+    }
+
+    // Timezone picker
+    function openTimezonePicker() {
+      const modal = document.getElementById('timezone-modal');
+      const list = document.getElementById('timezone-list');
+
+      list.innerHTML = timezones.map(tz => {
+        const info = getTimezoneInfo(tz);
         return `
-          <div class="zone-tag">
+          <div class="timezone-option" data-zone="${tz}">
             <span>${info.city}</span>
-            <button data-remove="${zone}">×</button>
+            <span style="opacity: 0.5">${info.offsetString}</span>
           </div>
         `;
       }).join('');
 
-      // Add remove handlers
-      list.querySelectorAll('[data-remove]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const zone = btn.dataset.remove;
-          zones = zones.filter(z => z !== zone);
-          updateZonesList();
-          render();
-        });
+      list.querySelectorAll('.timezone-option').forEach(option => {
+        option.onclick = () => {
+          addWidget(option.dataset.zone);
+          modal.classList.remove('active');
+        };
       });
+
+      modal.classList.add('active');
     }
+
+    function addWidget(zone) {
+      // Cycle through face types for variety
+      const faceIds = getFaceIds();
+      const faceType = faceIds[widgets.length % faceIds.length];
+      widgets.push({ zone, faceType });
+      render();
+      showToast(`Added ${getTimezoneInfo(zone).city}`);
+    }
+
+    // Toast
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2000);
+    }
+
+    // Palette switching
+    document.querySelectorAll('.swatch').forEach(swatch => {
+      swatch.onclick = () => {
+        document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentPalette = swatch.dataset.palette;
+        render();
+        showToast(`Theme: ${currentPalette.charAt(0).toUpperCase() + currentPalette.slice(1)}`);
+      };
+    });
+
+    // Add clock button
+    document.getElementById('add-clock').onclick = openTimezonePicker;
+
+    // Close modals on backdrop click
+    document.getElementById('face-picker-overlay').onclick = (e) => {
+      if (e.target.id === 'face-picker-overlay') closeFacePicker();
+    };
+    document.getElementById('timezone-modal').onclick = (e) => {
+      if (e.target.id === 'timezone-modal') {
+        document.getElementById('timezone-modal').classList.remove('active');
+      }
+    };
 
     // Initialize
     render();
-    updateZonesList();
-
-    // Animation loop - differential updates for smooth motion
-    // Update every 100ms for smooth second hand, CSS handles the interpolation
-    setInterval(updateHands, 100);
-
-    // Event handlers
-    document.getElementById('palette').addEventListener('change', (e) => {
-      config.theme.palette = e.target.value;
-      render();
-    });
-
-    document.querySelectorAll('[data-weight]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-weight]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        config.theme.weight = btn.dataset.weight;
-        render();
-      });
-    });
-
-    document.querySelectorAll('[data-bg]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        config.theme.background = btn.dataset.bg;
-        render();
-      });
-    });
-
-    document.querySelectorAll('[data-face]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-face]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        config.clock.face = btn.dataset.face;
-        render();
-      });
-    });
-
-    document.getElementById('markers').addEventListener('change', (e) => {
-      config.clock.markers.style = e.target.value;
-      render();
-    });
-
-    document.querySelectorAll('[data-count]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-count]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        config.clock.markers.count = parseInt(btn.dataset.count);
-        render();
-      });
-    });
-
-    document.querySelectorAll('[data-cols]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-cols]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        config.layout.columns = parseInt(btn.dataset.cols);
-        render();
-      });
-    });
-
-    document.getElementById('hierarchy').addEventListener('change', (e) => {
-      config.layout.hierarchy = e.target.value;
-      render();
-    });
-
-    document.getElementById('add-zone-btn').addEventListener('click', () => {
-      const select = document.getElementById('zone-select');
-      const zone = select.value;
-      if (zone && !zones.includes(zone)) {
-        zones.push(zone);
-        updateZonesList();
-        render();
-      }
-      select.value = '';
-    });
-
-    // Handle resize
-    window.addEventListener('resize', render);
+    setInterval(updateClocks, 1000);
+    setInterval(render, 60000); // Full re-render every minute for face updates
   </script>
 </body>
 </html>

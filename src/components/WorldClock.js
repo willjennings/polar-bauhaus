@@ -11,6 +11,7 @@ import { createSingleClock } from './SingleClock.js';
 import { getHandAnimationCSS, getSmartRotation } from './Hand.js';
 import { Config } from '../core/Config.js';
 import { getTimeForZone, getHandAngles } from '../core/ClockEngine.js';
+import { getAllFaceCSS, updateFace, hasFace } from '../faces/index.js';
 
 /**
  * Create a multi-timezone world clock SVG
@@ -18,6 +19,7 @@ import { getTimeForZone, getHandAngles } from '../core/ClockEngine.js';
  * @param {string[]} options.zones - Array of timezone strings
  * @param {number} options.width - Container width
  * @param {number} options.height - Container height
+ * @param {string} [options.faceType] - Clock face type (default: 'classic')
  * @param {Object} [options.config] - Configuration object
  * @returns {string} Complete SVG string
  */
@@ -25,6 +27,7 @@ export function createWorldClock({
   zones = ['local'],
   width = 800,
   height = 400,
+  faceType = 'classic',
   config = {}
 }) {
   // Normalize config
@@ -55,6 +58,7 @@ export function createWorldClock({
       cy: cell.cy,
       radius: cell.radius,
       zone,
+      faceType,
       config: cfg
     });
   });
@@ -65,6 +69,7 @@ export function createWorldClock({
   // Build SVG
   const style = `<style>
     ${getHandAnimationCSS()}
+    ${getAllFaceCSS()}
     .bauhaus-world-clock-bg { fill: ${bgColor}; }
   </style>`;
 
