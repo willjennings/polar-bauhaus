@@ -99,6 +99,11 @@
         secColor: null,
         hourColor: null,
 
+        // Shape for each ring: 'circle', 'square', 'triangle'
+        msShape: 'circle',
+        secShape: 'circle',
+        hourShape: 'circle',
+
         // Use time-of-day adaptive colors
         useTimeColors: true,
 
@@ -150,6 +155,160 @@
       this.settings.msColor = null;
       this.settings.secColor = null;
       this.settings.hourColor = null;
+    }
+
+    // Set shapes for each ring
+    setShapes(msShape, secShape, hourShape) {
+      this.settings.msShape = msShape || 'circle';
+      this.settings.secShape = secShape || 'circle';
+      this.settings.hourShape = hourShape || 'circle';
+    }
+
+    // Draw a square path with progress
+    drawSquareProgress(ctx, size, progress, strokeWidth, color, isBackground = false) {
+      const half = size;
+      const perimeter = size * 8; // 4 sides * 2 * half
+      const progressLength = progress * perimeter;
+
+      ctx.beginPath();
+      ctx.strokeStyle = isBackground ? 'rgba(0,0,0,0.1)' : color;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'square';
+
+      if (isBackground) {
+        // Draw full square
+        ctx.moveTo(-half, -half);
+        ctx.lineTo(half, -half);
+        ctx.lineTo(half, half);
+        ctx.lineTo(-half, half);
+        ctx.closePath();
+        ctx.stroke();
+        return;
+      }
+
+      // Draw progress along square edges starting from top-center
+      const points = [
+        { x: 0, y: -half },      // top center (start)
+        { x: half, y: -half },   // top right
+        { x: half, y: half },    // bottom right
+        { x: -half, y: half },   // bottom left
+        { x: -half, y: -half },  // top left
+        { x: 0, y: -half }       // back to top center
+      ];
+
+      // Calculate edge lengths
+      const edges = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const dx = points[i + 1].x - points[i].x;
+        const dy = points[i + 1].y - points[i].y;
+        edges.push(Math.sqrt(dx * dx + dy * dy));
+      }
+
+      let remaining = progressLength;
+      ctx.moveTo(points[0].x, points[0].y);
+
+      for (let i = 0; i < edges.length && remaining > 0; i++) {
+        const edgeLen = edges[i];
+        const drawLen = Math.min(remaining, edgeLen);
+        const ratio = drawLen / edgeLen;
+
+        const endX = points[i].x + (points[i + 1].x - points[i].x) * ratio;
+        const endY = points[i].y + (points[i + 1].y - points[i].y) * ratio;
+
+        ctx.lineTo(endX, endY);
+        remaining -= drawLen;
+      }
+
+      ctx.stroke();
+    }
+
+    // Draw a triangle path with progress
+    drawTriangleProgress(ctx, size, progress, strokeWidth, color, isBackground = false) {
+      const h = size * Math.sqrt(3) / 2; // height of equilateral triangle
+      const half = size;
+
+      ctx.beginPath();
+      ctx.strokeStyle = isBackground ? 'rgba(0,0,0,0.1)' : color;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+
+      // Equilateral triangle pointing up, start from top
+      const points = [
+        { x: 0, y: -h * 2/3 },           // top
+        { x: half, y: h / 3 },           // bottom right
+        { x: -half, y: h / 3 },          // bottom left
+        { x: 0, y: -h * 2/3 }            // back to top
+      ];
+
+      if (isBackground) {
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        return;
+      }
+
+      // Calculate perimeter and progress
+      let perimeter = 0;
+      const edges = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const dx = points[i + 1].x - points[i].x;
+        const dy = points[i + 1].y - points[i].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        edges.push(len);
+        perimeter += len;
+      }
+
+      const progressLength = progress * perimeter;
+      let remaining = progressLength;
+
+      ctx.moveTo(points[0].x, points[0].y);
+
+      for (let i = 0; i < edges.length && remaining > 0; i++) {
+        const edgeLen = edges[i];
+        const drawLen = Math.min(remaining, edgeLen);
+        const ratio = drawLen / edgeLen;
+
+        const endX = points[i].x + (points[i + 1].x - points[i].x) * ratio;
+        const endY = points[i].y + (points[i + 1].y - points[i].y) * ratio;
+
+        ctx.lineTo(endX, endY);
+        remaining -= drawLen;
+      }
+
+      ctx.stroke();
+    }
+
+    // Draw a shape with progress (dispatcher)
+    drawShapeProgress(ctx, shape, size, progress, strokeWidth, color, rotation = 0) {
+      ctx.save();
+      ctx.rotate(rotation);
+
+      if (shape === 'square') {
+        this.drawSquareProgress(ctx, size, 1, strokeWidth, null, true); // background
+        this.drawSquareProgress(ctx, size, progress, strokeWidth, color, false);
+      } else if (shape === 'triangle') {
+        this.drawTriangleProgress(ctx, size, 1, strokeWidth, null, true); // background
+        this.drawTriangleProgress(ctx, size, progress, strokeWidth, color, false);
+      } else {
+        // Circle (default)
+        ctx.beginPath();
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, size, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = strokeWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
 
     init() {
@@ -405,64 +564,43 @@
       const msRadius = 30;
       const strokeWidth = 18;
 
-      // Draw hour circle (outermost) - completes every 12 hours
+      // Draw hour shape (outermost) - completes every 12 hours
       if (this.settings.showHours) {
-        ctx.save();
-        ctx.rotate(hourRotation - Math.PI / 2);
-        // Background track
-        ctx.beginPath();
-        ctx.arc(0, 0, hourRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-        ctx.lineWidth = strokeWidth;
-        ctx.stroke();
-        // Progress arc
-        ctx.beginPath();
-        ctx.arc(0, 0, hourRadius, 0, hourProgress * Math.PI * 2);
-        ctx.strokeStyle = color3;
-        ctx.lineWidth = strokeWidth;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-        ctx.restore();
+        this.drawShapeProgress(
+          ctx,
+          this.settings.hourShape,
+          hourRadius,
+          hourProgress,
+          strokeWidth,
+          color3,
+          hourRotation - Math.PI / 2
+        );
       }
 
-      // Draw seconds circle (middle) - completes every 60 seconds
+      // Draw seconds shape (middle) - completes every 60 seconds
       if (this.settings.showSeconds) {
-        ctx.save();
-        ctx.rotate(secRotation - Math.PI / 2);
-        // Background track
-        ctx.beginPath();
-        ctx.arc(0, 0, secRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-        ctx.lineWidth = strokeWidth;
-        ctx.stroke();
-        // Progress arc
-        ctx.beginPath();
-        ctx.arc(0, 0, secRadius, 0, secProgress * Math.PI * 2);
-        ctx.strokeStyle = color2;
-        ctx.lineWidth = strokeWidth;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-        ctx.restore();
+        this.drawShapeProgress(
+          ctx,
+          this.settings.secShape,
+          secRadius,
+          secProgress,
+          strokeWidth,
+          color2,
+          secRotation - Math.PI / 2
+        );
       }
 
-      // Draw milliseconds circle (innermost) - completes every second
+      // Draw milliseconds shape (innermost) - completes every second
       if (this.settings.showMilliseconds) {
-        ctx.save();
-        ctx.rotate(msRotation - Math.PI / 2);
-        // Background track
-        ctx.beginPath();
-        ctx.arc(0, 0, msRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-        ctx.lineWidth = strokeWidth;
-        ctx.stroke();
-        // Progress arc
-        ctx.beginPath();
-        ctx.arc(0, 0, msRadius, 0, msProgress * Math.PI * 2);
-        ctx.strokeStyle = color1;
-        ctx.lineWidth = strokeWidth;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-        ctx.restore();
+        this.drawShapeProgress(
+          ctx,
+          this.settings.msShape,
+          msRadius,
+          msProgress,
+          strokeWidth,
+          color1,
+          msRotation - Math.PI / 2
+        );
       }
 
       // Center dot (use first visible color)
