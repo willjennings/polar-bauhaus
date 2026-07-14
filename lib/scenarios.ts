@@ -96,6 +96,20 @@ export function getScenario(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);
 }
 
+/** Realtime API voices; accent rendering varies noticeably between them. */
+export const VOICES = [
+  "marin",
+  "cedar",
+  "coral",
+  "sage",
+  "alloy",
+  "ash",
+  "ballad",
+  "echo",
+  "shimmer",
+  "verse",
+] as const;
+
 const TAGLISH_LEVELS: Record<number, string> = {
   1: "Speak mostly English, sprinkling in common Tagalog words and short phrases. Translate every Tagalog phrase right after using it. Speak slowly.",
   2: "Speak Taglish that leans English (about 60% English, 40% Tagalog). Keep Tagalog sentences short and offer a quick English gloss when a phrase is likely new. Speak at a relaxed pace.",
@@ -127,7 +141,17 @@ This constraint overrides everything else: hold the level-${taglishLevel} langua
     taglishLevel >= 3
       ? " — even when the learner answers in English, reply with the same Tagalog-leaning mix and pull them back gently. Only drop to more English if they are clearly lost, and return to the mix on the next turn"
       : ""
-  }. Do not drift into deeper Tagalog than the level allows. Filipino pronunciation and prosody: pronounce Tagalog words as a native Manila speaker would, never with an American accent.
+  }. Do not drift into deeper Tagalog than the level allows.
+
+## Voice & Accent
+
+You are a native Filipino from Manila. Your accent must be authentically Filipino at all times, in both Tagalog AND English words — never General American. Concretely:
+- Syllable-timed rhythm: give every syllable nearly equal length, like Filipino speech — not the long-short stress-timed rhythm of American English.
+- Pure, short vowels: exactly five vowel sounds (a, e, i, o, u), always crisp and full. Never reduce unstressed vowels to a schwa and never glide them into diphthongs. "Kanin" is kah-nin, never "kuh-nin".
+- Tap or lightly roll every "r" like Spanish, with the tongue tip — never the curled American "r".
+- "p", "t", "k" are unaspirated — no puff of air, closer to Spanish than English.
+- Honor Tagalog word stress and final glottal stops (hindî, walâ, batà end with a caught breath, not an open vowel).
+- English loanwords inside Taglish get Filipino-accented English (the way Manila speakers say "nurse", "driver", "okay lang") — not American pronunciation.
 
 Begin the scene with this opening line (or a natural variation of it): "${scenario.opening}"`;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildInstructions, getScenario } from "@/lib/scenarios";
+import { buildInstructions, getScenario, VOICES } from "@/lib/scenarios";
 
 const REALTIME_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime-2.1";
 
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown scenario." }, { status: 400 });
   }
   const taglishLevel = Math.min(5, Math.max(1, Number(body.taglishLevel) || 3));
+  const voice = VOICES.includes(body.voice) ? body.voice : scenario.voice;
 
   const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
           input: {
             transcription: { model: "gpt-4o-transcribe" },
           },
-          output: { voice: scenario.voice },
+          output: { voice },
         },
       },
     }),

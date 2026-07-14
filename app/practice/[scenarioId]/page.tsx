@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { getScenario, TAGLISH_LABELS } from "@/lib/scenarios";
+import { getScenario, TAGLISH_LABELS, VOICES } from "@/lib/scenarios";
 import { RealtimeSession, type SessionStatus } from "@/lib/realtime";
 import { addVocab, saveSession } from "@/lib/store";
 import type { Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
@@ -24,6 +24,7 @@ function Practice() {
   const taglishLevel = Math.min(5, Math.max(1, Number(searchParams.get("level")) || 3));
 
   const [status, setStatus] = useState<SessionStatus>("idle");
+  const [voice, setVoice] = useState<string | null>(null);
   const [statusDetail, setStatusDetail] = useState("");
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [muted, setMuted] = useState(false);
@@ -85,7 +86,7 @@ function Practice() {
     setFeedbackState("idle");
     startedAtRef.current = Date.now();
     try {
-      await session.connect(scenario.id, taglishLevel);
+      await session.connect(scenario.id, taglishLevel, voice ?? scenario.voice);
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");
@@ -165,6 +166,24 @@ function Practice() {
             You&apos;ll need your microphone. Your kausap speaks first — just respond naturally,
             and hit the lifeline any time you&apos;re stuck.
           </p>
+          <div className="mb-4 flex items-center justify-center gap-2 text-sm">
+            <label htmlFor="voice" className="opacity-70">
+              Voice
+            </label>
+            <select
+              id="voice"
+              value={voice ?? scenario.voice}
+              onChange={(e) => setVoice(e.target.value)}
+              className="rounded-lg border border-black/20 bg-transparent px-2 py-1 dark:border-white/20"
+            >
+              {VOICES.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                  {v === scenario.voice ? " (default)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={start}
             className="rounded-full bg-(--accent) px-6 py-3 font-medium text-white hover:opacity-90"
