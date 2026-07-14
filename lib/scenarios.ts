@@ -120,6 +120,14 @@ RULES:
 - If the learner is silent or stuck, gently prompt them in character with an easier question.
 - Never mention that you are an AI or that this is an exercise. You are simply ${scenario.title}.
 
+## Language
+
+This constraint overrides everything else: hold the level-${taglishLevel} language mix described above for the entire conversation. Do not drift into pure English${
+    taglishLevel >= 3
+      ? " — even when the learner answers in English, reply with the same Tagalog-leaning mix and pull them back gently. Only drop to more English if they are clearly lost, and return to the mix on the next turn"
+      : ""
+  }. Do not drift into deeper Tagalog than the level allows. Filipino pronunciation and prosody: pronounce Tagalog words as a native Manila speaker would, never with an American accent.
+
 Begin the scene with this opening line (or a natural variation of it): "${scenario.opening}"`;
 }
 

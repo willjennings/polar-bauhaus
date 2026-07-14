@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildInstructions, getScenario } from "@/lib/scenarios";
 
-const REALTIME_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime";
+const REALTIME_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime-2.1";
 
 /**
  * Mints an ephemeral Realtime client secret for one practice session.
