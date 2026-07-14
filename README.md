@@ -4,8 +4,9 @@ Personal Tagalog voice-practice app for heritage speakers — real-time spoken
 roleplay with an AI conversation partner ("kausap"), built on the OpenAI
 Realtime API over WebRTC.
 
-You pick a scene (carinderia, palengke, jeepney, family reunion, calling Lola,
-balikbayan arrival), set the **Taglish dial** (how much English your partner
+You pick a scene from Filipino home life (breakfast with Nanay, cooking adobo
+together, family dinner, Saturday chores, Tita's merienda visit, calling
+Lola), set the **Taglish dial** (how much English your partner
 mixes in), and just talk. When you're stuck mid-sentence, the **Lifeline**
 button gets you the phrase you need without breaking the scene. After you hang
 up, a feedback report shows what you said vs. how a native would say it, and
@@ -32,11 +33,11 @@ support) and allow microphone access.
 
 ## Two-minute smoke test
 
-1. `npm run dev`, open the app, pick **Carinderia**, leave the dial at 3.
-2. Click **Start conversation** and allow the mic. Aling Nena should greet you
-   in Tagalog within a few seconds, and her words appear in the transcript.
-3. Order something ("Isang sinigang po at kanin"), then tap **🛟 Lifeline** —
-   she should briefly break character and teach you a phrase.
+1. `npm run dev`, open the app, pick **Cooking together**, leave the dial at 3.
+2. Click **Start conversation** and allow the mic. Nanay should greet you in
+   Tagalog within a few seconds, and her words appear in the transcript.
+3. Follow along ("Opo, kukunin ko ang toyo"), then tap **🛟 Lifeline** — she
+   should briefly break character and teach you a phrase.
 4. Click **📞 Hang up**. A feedback report appears with corrections and new
    vocab; check the **Vocab** tab to see the words saved.
 5. Optional A/B: set `REALTIME_MODEL=gpt-realtime-2.1-mini` in `.env.local`
