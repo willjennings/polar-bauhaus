@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { getScenario, TAGLISH_LABELS, VOICES } from "@/lib/scenarios";
 import { RealtimeSession, type SessionStatus } from "@/lib/realtime";
-import { addVocab, saveSession } from "@/lib/store";
+import { addVocab, listVocab, saveSession } from "@/lib/store";
 import type { Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
 import FeedbackReport from "@/app/components/FeedbackReport";
 
@@ -85,8 +85,11 @@ function Practice() {
     setFeedback(null);
     setFeedbackState("idle");
     startedAtRef.current = Date.now();
+    const reviewVocab = listVocab()
+      .slice(0, 8)
+      .map((v) => v.tagalog);
     try {
-      await session.connect(scenario.id, taglishLevel, voice ?? scenario.voice);
+      await session.connect(scenario.id, taglishLevel, voice ?? scenario.voice, reviewVocab);
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");

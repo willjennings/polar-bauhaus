@@ -38,13 +38,18 @@ export class RealtimeSession {
     this.callbacks = callbacks;
   }
 
-  async connect(scenarioId: string, taglishLevel: number, voice?: string): Promise<void> {
+  async connect(
+    scenarioId: string,
+    taglishLevel: number,
+    voice?: string,
+    reviewVocab: string[] = []
+  ): Promise<void> {
     this.callbacks.onStatus("connecting", "Requesting session…");
 
     const tokenRes = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenarioId, taglishLevel, voice }),
+      body: JSON.stringify({ scenarioId, taglishLevel, voice, reviewVocab }),
     });
     if (!tokenRes.ok) {
       const body = await tokenRes.json().catch(() => ({}));

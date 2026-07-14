@@ -8,14 +8,27 @@ export default function FeedbackReport({ feedback }: { feedback: Feedback }) {
         <p className="mt-1 text-sm opacity-80">{feedback.summary}</p>
       </div>
 
+      {feedback.wins && feedback.wins.length > 0 && (
+        <div>
+          <h2 className="font-semibold">What landed 💪</h2>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {feedback.wins.map((w, i) => (
+              <li key={i} className="text-sm opacity-80">
+                ✓ {w}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {feedback.corrections.length > 0 && (
         <div>
-          <h2 className="font-semibold">Say it more naturally</h2>
+          <h2 className="font-semibold">You could also say</h2>
           <ul className="mt-2 flex flex-col gap-3">
             {feedback.corrections.map((c, i) => (
               <li key={i} className="rounded-lg bg-black/5 p-3 text-sm dark:bg-white/5">
-                <p className="line-through opacity-60">{c.youSaid}</p>
-                <p className="mt-0.5 font-medium text-accent-warm">{c.better}</p>
+                <p className="opacity-70">You said: {c.youSaid}</p>
+                <p className="mt-0.5 font-medium text-accent-warm">Also works: {c.better}</p>
                 <p className="mt-1 text-xs opacity-70">{c.note}</p>
               </li>
             ))}

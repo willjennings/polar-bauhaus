@@ -23,6 +23,11 @@ export async function POST(req: NextRequest) {
   }
   const taglishLevel = Math.min(5, Math.max(1, Number(body.taglishLevel) || 3));
   const voice = VOICES.includes(body.voice) ? body.voice : scenario.voice;
+  const reviewVocab: string[] = Array.isArray(body.reviewVocab)
+    ? body.reviewVocab
+        .filter((w: unknown) => typeof w === "string" && w.length <= 40)
+        .slice(0, 8)
+    : [];
 
   const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
@@ -34,7 +39,7 @@ export async function POST(req: NextRequest) {
       session: {
         type: "realtime",
         model: REALTIME_MODEL,
-        instructions: buildInstructions(scenario, taglishLevel),
+        instructions: buildInstructions(scenario, taglishLevel, reviewVocab),
         audio: {
           input: {
             transcription: { model: "gpt-4o-transcribe" },

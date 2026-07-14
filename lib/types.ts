@@ -23,6 +23,8 @@ export interface VocabItem {
 
 export interface Feedback {
   summary: string;
+  /** What the learner successfully produced — always shown first. */
+  wins?: string[];
   corrections: Correction[];
   vocab: Omit<VocabItem, "scenarioId" | "addedAt">[];
   encouragement: string;
