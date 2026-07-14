@@ -25,11 +25,28 @@ support) and allow microphone access.
 
 ### Environment variables (`.env.local`)
 
-| Variable         | Required | Default            | Purpose                                  |
-| ---------------- | -------- | ------------------ | ---------------------------------------- |
-| `OPENAI_API_KEY` | yes      | —                  | Server-side only; never sent to browser. |
-| `REALTIME_MODEL` | no       | `gpt-realtime-2.1` | Realtime speech-to-speech model.         |
-| `FEEDBACK_MODEL` | no       | `gpt-4o-mini`      | Model for post-session feedback.         |
+| Variable         | Required | Default            | Purpose                                       |
+| ---------------- | -------- | ------------------ | --------------------------------------------- |
+| `OPENAI_API_KEY` | yes      | —                  | Server-side only; never sent to browser.      |
+| `REALTIME_MODEL` | no       | `gpt-realtime-2.1` | Realtime speech-to-speech model.              |
+| `FEEDBACK_MODEL` | no       | `gpt-4o-mini`      | Model for post-session feedback.              |
+| `APP_PASSWORD`   | no       | unset (open)       | Password-gates every page/route when set.     |
+
+## Deploying (Vercel)
+
+1. Push this branch (or merge it to `master`).
+2. [vercel.com](https://vercel.com) → **Add New → Project** → import
+   `willjennings/polar-bauhaus` (sign in with GitHub). Framework auto-detects
+   as Next.js; no build settings needed.
+3. Under **Environment Variables**, add `OPENAI_API_KEY` and — since the URL
+   is public — `APP_PASSWORD`. Without a password, anyone who finds the URL
+   can hold conversations on your OpenAI credit.
+4. Deploy. Visit the `*.vercel.app` URL; the browser will prompt for the
+   password (any username). HTTPS is automatic, which mobile browsers require
+   for microphone access — so this also unlocks practicing from your phone.
+
+Sessions and vocab are stored per-browser (localStorage), so your phone and
+laptop keep separate histories.
 
 ## Two-minute smoke test
 
