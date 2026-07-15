@@ -355,7 +355,7 @@ export const CURRICULUM: Unit[] = [
       {
         id: "g-i-verbs",
         pattern: "i- conveyance focus: ibinigay (completed) / ibinibigay (incompleted) / ibibigay (contemplated)",
-        exampleFrames: ["Ibinigay ko ang regalo kay Lia.", "Iarot mo nga ang toyo."],
+        exampleFrames: ["Ibinigay ko ang regalo kay Lia.", "Iabot mo nga ang toyo."],
       },
       {
         id: "g-an-verbs",
@@ -382,7 +382,7 @@ export const CURRICULUM: Unit[] = [
         setting: "family dinner: passing dishes, serving the kids, keeping plates full",
         why: "a crowded table runs on iabot/ibigay requests (Iabot mo nga ang kanin) in both directions",
         propsVocab: ["iabot", "ibigay", "kanin"],
-        opening: "O, kain na tayo! Iarot mo nga ang kanin — at ibigay mo muna ang ulam sa bunso.",
+        opening: "O, kain na tayo! Iabot mo nga ang kanin — at ibigay mo muna ang ulam sa bunso.",
       },
       {
         id: "s-hugasan-night",
