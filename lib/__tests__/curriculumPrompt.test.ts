@@ -42,4 +42,11 @@ describe("curriculum prompt blocks", () => {
   it("returns empty string for unknown unit", () => {
     expect(buildCurriculumBlocks({ mode: "free", currentUnit: "u99", errorFocus: [] })).toBe("");
   });
+
+  it("review mode with no due items renders no review sprint block", () => {
+    const s = buildCurriculumBlocks({
+      mode: "review", currentUnit: "u05", errorFocus: [], reviewItems: [],
+    });
+    expect(s).not.toContain("REVIEW SPRINT");
+  });
 });

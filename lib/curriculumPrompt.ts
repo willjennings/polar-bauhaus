@@ -62,7 +62,7 @@ Engineer natural in-scene openings — a request, a question that requires the f
 This scene exists to elicit the current unit's grammar. For each target, engineer at least 3 natural chances for the learner to produce it:
 ${unit.grammarTargets.map((t) => `- ${t.id}: "${t.pattern}"`).join("\n")}
 Stay fully in character; the engineering hides inside the scene. Keep your turns extra short so the learner talks more.`;
-  } else if (ctx.mode === "review") {
+  } else if (ctx.mode === "review" && (ctx.reviewItems ?? []).length > 0) {
     mode = `
 ## Session mode: REVIEW SPRINT (about 5 minutes)
 

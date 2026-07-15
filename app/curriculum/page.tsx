@@ -6,6 +6,7 @@ import { CURRICULUM, defaultLevelForUnit, getUnit, pickSeed, unitIndex } from "@
 import { advanceUnit, canAdvance, loadLearnerState, saveLearnerState, type LearnerState } from "@/lib/learner";
 import { buildStatusMarkdown } from "@/lib/exportStatus";
 import { useHydrated } from "@/lib/useHydrated";
+import { dueItems } from "@/lib/srs";
 
 export default function CurriculumPage() {
   const hydrated = useHydrated();
@@ -13,12 +14,13 @@ export default function CurriculumPage() {
   const learner = state ?? (hydrated ? loadLearnerState() : null);
   if (!learner) return <p className="animate-pulse text-sm opacity-60">Loading…</p>;
 
-  const unit = getUnit(learner.currentUnit)!;
+  const unit = getUnit(learner.currentUnit) ?? CURRICULUM[0];
   const currentIdx = unitIndex(learner.currentUnit);
   const gate = canAdvance(learner);
   const checks = learner.canDoChecks[unit.id] ?? unit.canDo.map(() => false);
   const nextSeed = pickSeed(unit.id, learner.lastSeedId);
   const level = defaultLevelForUnit(unit.id);
+  const hasDue = dueItems(learner.vocabSrs, Date.now(), 1).length > 0;
 
   const update = (next: LearnerState) => {
     saveLearnerState(next);
@@ -41,7 +43,12 @@ export default function CurriculumPage() {
       <h1 className="text-2xl font-semibold">Curriculum</h1>
       <button
         onClick={async () => {
-          await navigator.clipboard.writeText(buildStatusMarkdown(learner, Date.now()));
+          try {
+            await navigator.clipboard.writeText(buildStatusMarkdown(learner, Date.now()));
+          } catch {
+            window.alert("Copy failed — select and copy manually.");
+            return;
+          }
           window.alert("Status copied — paste it into a Claude chat.");
         }}
         className="self-start rounded-full border border-black/20 px-4 py-1.5 text-sm dark:border-white/20"
@@ -72,7 +79,7 @@ export default function CurriculumPage() {
               🎬 Start Target Scene — {nextSeed.setting}
             </Link>
           )}
-          {nextSeed && (
+          {nextSeed && hasDue && (
             <Link
               href={`/practice/seed?seed=${nextSeed.id}&mode=review&level=${level}`}
               className="rounded-full border border-black/20 px-4 py-1.5 text-sm dark:border-white/20"

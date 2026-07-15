@@ -109,7 +109,6 @@ function Practice() {
     const reviewItems =
       mode === "review" ? dueItems(learner.vocabSrs, Date.now(), 12) : undefined;
     reviewItemsRef.current = reviewItems;
-    if (seedHit) saveLearnerState({ ...learner, lastSeedId: seedHit.seed.id });
     try {
       await session.connect({
         scenarioId: scenario.id,
@@ -122,6 +121,7 @@ function Practice() {
         reviewItems,
         seedId: seedHit?.seed.id,
       });
+      if (seedHit) saveLearnerState({ ...learner, lastSeedId: seedHit.seed.id });
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");

@@ -35,9 +35,14 @@ export default function LiaPrepPage() {
 
   const copy = async () => {
     if (!prompts) return;
-    await navigator.clipboard.writeText(
-      prompts.map((p) => `• ${p.tagalog}\n  (${p.english})`).join("\n")
-    );
+    try {
+      await navigator.clipboard.writeText(
+        prompts.map((p) => `• ${p.tagalog}\n  (${p.english})`).join("\n")
+      );
+    } catch {
+      window.alert("Copy failed — select and copy manually.");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
