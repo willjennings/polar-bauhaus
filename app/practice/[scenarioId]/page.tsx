@@ -8,6 +8,12 @@ import { RealtimeSession, type SessionStatus } from "@/lib/realtime";
 import { addVocab, listVocab, saveSession } from "@/lib/store";
 import type { Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
 import FeedbackReport from "@/app/components/FeedbackReport";
+import { getSeed, seedToScenario } from "@/lib/curriculum";
+import {
+  loadLearnerState, saveLearnerState, recordCorrections, logSession,
+  applyReviewResults, topErrorTags, type Mode,
+} from "@/lib/learner";
+import { dueItems } from "@/lib/srs";
 
 export default function PracticePage() {
   return (
@@ -20,8 +26,14 @@ export default function PracticePage() {
 function Practice() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const searchParams = useSearchParams();
-  const scenario = getScenario(scenarioId);
   const taglishLevel = Math.min(5, Math.max(1, Number(searchParams.get("level")) || 3));
+
+  const seedId = searchParams.get("seed");
+  const seedHit = seedId ? getSeed(seedId) : undefined;
+  const scenario = seedHit ? seedToScenario(seedHit.seed, seedHit.unit) : getScenario(scenarioId);
+
+  const modeParam = searchParams.get("mode");
+  const mode: Mode = modeParam === "target" || modeParam === "review" ? modeParam : "free";
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [voice, setVoice] = useState<string | null>(null);
@@ -36,6 +48,7 @@ function Practice() {
   const entriesRef = useRef<TranscriptEntry[]>([]);
   const startedAtRef = useRef(0);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const reviewItemsRef = useRef<string[] | undefined>(undefined);
 
   useEffect(() => {
     entriesRef.current = entries;
@@ -88,12 +101,26 @@ function Practice() {
     const reviewVocab = listVocab()
       .slice(0, 8)
       .map((v) => v.tagalog);
+    const learner = loadLearnerState();
+    const errorFocus = topErrorTags(learner, 3).map((e) => ({
+      patternTag: e.patternTag,
+      example: e.examples[0]?.learnerSaid,
+    }));
+    const reviewItems =
+      mode === "review" ? dueItems(learner.vocabSrs, Date.now(), 12) : undefined;
+    reviewItemsRef.current = reviewItems;
+    if (seedHit) saveLearnerState({ ...learner, lastSeedId: seedHit.seed.id });
     try {
       await session.connect({
         scenarioId: scenario.id,
         taglishLevel,
         voice: voice ?? scenario.voice,
         reviewVocab,
+        mode,
+        currentUnit: learner.currentUnit,
+        errorFocus,
+        reviewItems,
+        seedId: seedHit?.seed.id,
       });
     } catch (err) {
       setStatus("error");
@@ -115,6 +142,8 @@ function Practice() {
       endedAt: Date.now(),
       transcript,
       feedback: null,
+      mode,
+      unitId: loadLearnerState().currentUnit,
     };
 
     const spoke = transcript.some((e) => e.speaker === "you");
@@ -130,7 +159,12 @@ function Practice() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({
+          transcript,
+          mode,
+          currentUnit: loadLearnerState().currentUnit,
+          reviewItems: reviewItemsRef.current,
+        }),
       });
       if (!res.ok) throw new Error();
       const { feedback: fb } = (await res.json()) as { feedback: Feedback };
@@ -140,6 +174,26 @@ function Practice() {
       addVocab(
         fb.vocab.map((v) => ({ ...v, scenarioId: scenario.id, addedAt: Date.now() }))
       );
+      let learner = loadLearnerState();
+      const now = Date.now();
+      learner = recordCorrections(
+        learner,
+        fb.corrections.map((c) => ({ learnerSaid: c.youSaid, target: c.better, patternTag: c.patternTag })),
+        learner.currentUnit,
+        now
+      );
+      if (fb.reviewResults) learner = applyReviewResults(learner, fb.reviewResults, now);
+      learner = logSession(learner, {
+        ts: startedAtRef.current,
+        mode,
+        unitId: learner.currentUnit,
+        corrections: fb.corrections.length,
+        durationMin: Math.max(1, Math.round((now - startedAtRef.current) / 60000)),
+        drillScores: fb.drillScores
+          ? Object.fromEntries(fb.drillScores.map((d) => [d.targetId, d.score]))
+          : undefined,
+      });
+      saveLearnerState(learner);
     } catch {
       setFeedbackState("error");
     }
@@ -161,6 +215,7 @@ function Practice() {
           </h1>
           <p className="text-sm opacity-70">
             {scenario.description} · {TAGLISH_LABELS[taglishLevel]}
+            {mode !== "free" && <> · {mode === "target" ? "Target scene" : "Review sprint"}</>}
           </p>
         </div>
         <Link href="/" className="text-sm text-accent underline">
@@ -174,6 +229,21 @@ function Practice() {
             You&apos;ll need your microphone. Your kausap speaks first — just respond naturally,
             and hit the lifeline any time you&apos;re stuck.
           </p>
+          <div className="mb-4 flex items-center justify-center gap-2 text-sm">
+            {(["target", "free", "review"] as const).map((m) => (
+              <Link
+                key={m}
+                href={`/practice/${scenarioId}?level=${taglishLevel}&mode=${m}${seedId ? `&seed=${seedId}` : ""}`}
+                className={`rounded-full border px-3 py-1 ${
+                  mode === m
+                    ? "border-(--accent) bg-(--accent) text-white"
+                    : "border-black/20 dark:border-white/20"
+                }`}
+              >
+                {m === "target" ? "🎬 Target scene" : m === "free" ? "🗣️ Free scene" : "⚡ Review sprint"}
+              </Link>
+            ))}
+          </div>
           <div className="mb-4 flex items-center justify-center gap-2 text-sm">
             <label htmlFor="voice" className="opacity-70">
               Voice
