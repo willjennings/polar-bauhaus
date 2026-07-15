@@ -89,7 +89,12 @@ function Practice() {
       .slice(0, 8)
       .map((v) => v.tagalog);
     try {
-      await session.connect(scenario.id, taglishLevel, voice ?? scenario.voice, reviewVocab);
+      await session.connect({
+        scenarioId: scenario.id,
+        taglishLevel,
+        voice: voice ?? scenario.voice,
+        reviewVocab,
+      });
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");

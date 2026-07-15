@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_BASE_URL, WEBRTC_CALLS_URL, authHeaders, getApiKey } from "@/lib/openai-server";
 import { buildInstructions, getScenario, VOICES } from "@/lib/scenarios";
+import { buildCurriculumBlocks, type CurriculumContext } from "@/lib/curriculumPrompt";
+import { getSeed, getUnit, seedToScenario } from "@/lib/curriculum";
 
 // On Azure this is the *deployment name*, not the model name.
 const REALTIME_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime-2.1";
@@ -20,7 +22,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const scenario = getScenario(body.scenarioId);
+  const seedHit = typeof body.seedId === "string" ? getSeed(body.seedId) : undefined;
+  const scenario = seedHit
+    ? seedToScenario(seedHit.seed, seedHit.unit)
+    : getScenario(body.scenarioId);
   if (!scenario) {
     return NextResponse.json({ error: "Unknown scenario." }, { status: 400 });
   }
@@ -32,6 +37,31 @@ export async function POST(req: NextRequest) {
         .slice(0, 8)
     : [];
 
+  const MODES = ["target", "free", "review"] as const;
+  const mode = MODES.includes(body.mode) ? (body.mode as CurriculumContext["mode"]) : "free";
+  const currentUnit =
+    typeof body.currentUnit === "string" && getUnit(body.currentUnit) ? body.currentUnit : null;
+  const errorFocus: CurriculumContext["errorFocus"] = Array.isArray(body.errorFocus)
+    ? body.errorFocus
+        .filter((e: unknown): e is { patternTag: string; example?: string } =>
+          typeof e === "object" && e !== null &&
+          typeof (e as { patternTag?: unknown }).patternTag === "string" &&
+          (e as { patternTag: string }).patternTag.length <= 40
+        )
+        .slice(0, 3)
+        .map((e: { patternTag: string; example?: string }) => ({
+          patternTag: e.patternTag,
+          example: typeof e.example === "string" ? e.example.slice(0, 120) : undefined,
+        }))
+    : [];
+  const reviewItems: string[] = Array.isArray(body.reviewItems)
+    ? body.reviewItems.filter((w: unknown) => typeof w === "string" && w.length <= 40).slice(0, 12)
+    : [];
+
+  const curriculumBlocks = currentUnit
+    ? buildCurriculumBlocks({ mode, currentUnit, errorFocus, reviewItems })
+    : "";
+
   const res = await fetch(`${API_BASE_URL}/realtime/client_secrets`, {
     method: "POST",
     headers: {
@@ -42,7 +72,7 @@ export async function POST(req: NextRequest) {
       session: {
         type: "realtime",
         model: REALTIME_MODEL,
-        instructions: buildInstructions(scenario, taglishLevel, reviewVocab),
+        instructions: buildInstructions(scenario, taglishLevel, reviewVocab) + curriculumBlocks,
         audio: {
           input: {
             transcription: { model: TRANSCRIBE_MODEL },

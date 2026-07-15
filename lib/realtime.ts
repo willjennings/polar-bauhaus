@@ -12,6 +12,18 @@ export interface RealtimeCallbacks {
   onTranscript: (entry: TranscriptEntry) => void;
 }
 
+export interface ConnectOptions {
+  scenarioId: string;
+  taglishLevel: number;
+  voice?: string;
+  reviewVocab?: string[];
+  mode?: "target" | "free" | "review";
+  currentUnit?: string;
+  errorFocus?: { patternTag: string; example?: string }[];
+  reviewItems?: string[];
+  seedId?: string;
+}
+
 interface RealtimeEvent {
   type: string;
   item_id?: string;
@@ -39,18 +51,13 @@ export class RealtimeSession {
     this.callbacks = callbacks;
   }
 
-  async connect(
-    scenarioId: string,
-    taglishLevel: number,
-    voice?: string,
-    reviewVocab: string[] = []
-  ): Promise<void> {
+  async connect(opts: ConnectOptions): Promise<void> {
     this.callbacks.onStatus("connecting", "Requesting session…");
 
     const tokenRes = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenarioId, taglishLevel, voice, reviewVocab }),
+      body: JSON.stringify(opts),
     });
     if (!tokenRes.ok) {
       const body = await tokenRes.json().catch(() => ({}));
