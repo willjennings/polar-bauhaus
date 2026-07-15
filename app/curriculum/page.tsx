@@ -70,6 +70,12 @@ export default function CurriculumPage() {
               ⚡ Review sprint
             </Link>
           )}
+          <Link
+            href="/lia-prep"
+            className="rounded-full border border-black/20 px-4 py-1.5 text-sm dark:border-white/20"
+          >
+            🍽️ Lia Prep
+          </Link>
         </div>
       </section>
 
