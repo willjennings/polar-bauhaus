@@ -11,6 +11,19 @@ export interface Correction {
   youSaid: string;
   better: string;
   note: string;
+  /** Closed-set error category (curriculum target id or generic tag). */
+  patternTag?: string;
+}
+
+export interface DrillScore {
+  targetId: string;
+  score: number; // 0-100
+  evidence: string;
+}
+
+export interface ReviewResult {
+  item: string;
+  recalled: boolean;
 }
 
 export interface VocabItem {
@@ -28,6 +41,8 @@ export interface Feedback {
   corrections: Correction[];
   vocab: Omit<VocabItem, "scenarioId" | "addedAt">[];
   encouragement: string;
+  drillScores?: DrillScore[];
+  reviewResults?: ReviewResult[];
 }
 
 export interface SessionRecord {
@@ -38,4 +53,6 @@ export interface SessionRecord {
   endedAt: number;
   transcript: TranscriptEntry[];
   feedback: Feedback | null;
+  mode?: "target" | "free" | "review";
+  unitId?: string;
 }
