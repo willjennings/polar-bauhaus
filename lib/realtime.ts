@@ -20,7 +20,8 @@ interface RealtimeEvent {
   error?: { message?: string };
 }
 
-const OPENAI_WEBRTC_URL = "https://api.openai.com/v1/realtime/calls";
+// Fallback when the server doesn't send a webrtcUrl (direct OpenAI).
+const DEFAULT_WEBRTC_URL = "https://api.openai.com/v1/realtime/calls";
 
 /**
  * Manages one voice conversation: mints an ephemeral token via our API route,
@@ -55,7 +56,7 @@ export class RealtimeSession {
       const body = await tokenRes.json().catch(() => ({}));
       throw new Error(body.error ?? `Session request failed (${tokenRes.status})`);
     }
-    const { clientSecret, model } = await tokenRes.json();
+    const { clientSecret, model, webrtcUrl } = await tokenRes.json();
 
     this.callbacks.onStatus("connecting", "Requesting microphone…");
     this.mic = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -88,14 +89,17 @@ export class RealtimeSession {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    const sdpRes = await fetch(`${OPENAI_WEBRTC_URL}?model=${encodeURIComponent(model)}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${clientSecret}`,
-        "Content-Type": "application/sdp",
-      },
-      body: offer.sdp,
-    });
+    const sdpRes = await fetch(
+      `${webrtcUrl ?? DEFAULT_WEBRTC_URL}?model=${encodeURIComponent(model)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${clientSecret}`,
+          "Content-Type": "application/sdp",
+        },
+        body: offer.sdp,
+      }
+    );
     if (!sdpRes.ok) {
       throw new Error(`Voice connection failed (${sdpRes.status})`);
     }

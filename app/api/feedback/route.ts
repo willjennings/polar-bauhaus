@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { API_BASE_URL, authHeaders, getApiKey } from "@/lib/openai-server";
 import type { TranscriptEntry } from "@/lib/types";
 
+// On Azure this is the *deployment name*, not the model name.
 const FEEDBACK_MODEL = process.env.FEEDBACK_MODEL ?? "gpt-4o-mini";
 
 const FEEDBACK_SCHEMA = {
@@ -49,10 +51,10 @@ const FEEDBACK_SCHEMA = {
 } as const;
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY is not set. Add it to .env.local and restart the dev server." },
+      { error: "No API key set. Add OPENAI_API_KEY or FOUNDRY_API_KEY to .env.local and restart the dev server." },
       { status: 500 }
     );
   }
@@ -68,10 +70,10 @@ export async function POST(req: NextRequest) {
     .map((t) => `${t.speaker === "you" ? "LEARNER" : "PARTNER"}: ${t.text}`)
     .join("\n");
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch(`${API_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      ...authHeaders(apiKey),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

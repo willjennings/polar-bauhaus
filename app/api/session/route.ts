@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { API_BASE_URL, WEBRTC_CALLS_URL, authHeaders, getApiKey } from "@/lib/openai-server";
 import { buildInstructions, getScenario, VOICES } from "@/lib/scenarios";
 
+// On Azure this is the *deployment name*, not the model name.
 const REALTIME_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime-2.1";
+const TRANSCRIBE_MODEL = process.env.TRANSCRIBE_MODEL ?? "gpt-4o-transcribe";
 
 /**
  * Mints an ephemeral Realtime client secret for one practice session.
  * The real OPENAI_API_KEY never leaves the server.
  */
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY is not set. Add it to .env.local and restart the dev server." },
+      { error: "No API key set. Add OPENAI_API_KEY or FOUNDRY_API_KEY to .env.local and restart the dev server." },
       { status: 500 }
     );
   }
@@ -29,10 +32,10 @@ export async function POST(req: NextRequest) {
         .slice(0, 8)
     : [];
 
-  const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+  const res = await fetch(`${API_BASE_URL}/realtime/client_secrets`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      ...authHeaders(apiKey),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
         instructions: buildInstructions(scenario, taglishLevel, reviewVocab),
         audio: {
           input: {
-            transcription: { model: "gpt-4o-transcribe" },
+            transcription: { model: TRANSCRIBE_MODEL },
           },
           output: { voice },
         },
@@ -54,11 +57,15 @@ export async function POST(req: NextRequest) {
     const detail = await res.text();
     console.error("client_secrets failed:", res.status, detail);
     return NextResponse.json(
-      { error: `OpenAI session request failed (${res.status}).` },
+      { error: `Realtime session request failed (${res.status}).` },
       { status: 502 }
     );
   }
 
   const data = await res.json();
-  return NextResponse.json({ clientSecret: data.value, model: REALTIME_MODEL });
+  return NextResponse.json({
+    clientSecret: data.value,
+    model: REALTIME_MODEL,
+    webrtcUrl: WEBRTC_CALLS_URL,
+  });
 }
