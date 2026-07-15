@@ -62,6 +62,23 @@ laptop keep separate histories.
    mixing with your own ears. No public benchmark covers Tagalog synthesis
    quality, so your ears are the test.
 
+## Curriculum mode
+
+Underneath free-form scenes sits an optional 10-unit grammar spine
+(`lib/curriculum.ts`, original content, u01–u10), each unit with scene seeds
+— persona, setting, opening line — engineered so the grammar is the natural
+way to complete the scene (adobo-cooking is the reference seed). The
+**Curriculum** page tracks your current unit and rotates seeds.
+
+Every seeded scene runs as a **Target scene** (engineers and scores chances
+to produce the unit's grammar), a **Free scene** (steered softly toward what
+you've covered), or a **Review sprint** (a brisk game probing only vocab due
+in your spaced-repetition box). Advancing units is gated but not locked — it
+wants can-dos self-checked and two clean Target reports, but you can always
+force-advance (logged as an override). **Lia Prep** turns the current unit
+into printable dinner-table prompt cards; **status export** pastes a
+markdown progress summary for asking Claude for help offline.
+
 ## Notes
 
 - **Cost:** Realtime audio is billed per token of input/output audio
