@@ -44,6 +44,9 @@ export default function RootLayout({
               <Link href="/vocab" className="hover:text-accent">
                 Vocab
               </Link>
+              <Link href="/curriculum" className="hover:text-accent">
+                Curriculum
+              </Link>
             </div>
           </nav>
         </header>

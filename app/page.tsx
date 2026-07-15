@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { SCENARIOS, TAGLISH_LABELS } from "@/lib/scenarios";
+import { getUnit } from "@/lib/curriculum";
+import { loadLearnerState } from "@/lib/learner";
 import { useHydrated } from "@/lib/useHydrated";
 
 const TAGLISH_KEY = "kausap.taglishLevel";
@@ -50,6 +53,21 @@ export default function Home() {
           <span>Full Tagalog, native speed</span>
         </div>
       </section>
+
+      {hydrated && (() => {
+        const unit = getUnit(loadLearnerState().currentUnit);
+        return unit ? (
+          <Link
+            href="/curriculum"
+            className="rounded-xl border border-black/10 p-4 transition hover:border-accent dark:border-white/10"
+          >
+            <span className="text-sm opacity-70">Now learning</span>
+            <div className="font-semibold">
+              {unit.id} — {unit.title}
+            </div>
+          </Link>
+        ) : null;
+      })()}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {SCENARIOS.map((s) => (
