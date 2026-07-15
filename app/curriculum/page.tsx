@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CURRICULUM, defaultLevelForUnit, getUnit, pickSeed, unitIndex } from "@/lib/curriculum";
 import { advanceUnit, canAdvance, loadLearnerState, saveLearnerState, type LearnerState } from "@/lib/learner";
+import { buildStatusMarkdown } from "@/lib/exportStatus";
 import { useHydrated } from "@/lib/useHydrated";
 
 export default function CurriculumPage() {
@@ -38,6 +39,15 @@ export default function CurriculumPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Curriculum</h1>
+      <button
+        onClick={async () => {
+          await navigator.clipboard.writeText(buildStatusMarkdown(learner, Date.now()));
+          window.alert("Status copied — paste it into a Claude chat.");
+        }}
+        className="self-start rounded-full border border-black/20 px-4 py-1.5 text-sm dark:border-white/20"
+      >
+        📤 Share status with Claude
+      </button>
 
       <section className="rounded-xl border border-black/10 p-4 dark:border-white/10">
         <h2 className="font-semibold">
