@@ -99,6 +99,71 @@ export function topErrorTags(state: LearnerState, n = 3): ErrorPattern[] {
   return [...state.errorLedger].sort((a, b) => b.count - a.count).slice(0, n);
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Like topErrorTags, but excludes patterns that haven't recurred recently. */
+export function recentErrorFocus(
+  state: LearnerState,
+  now: number,
+  n = 3,
+  windowDays = 14
+): ErrorPattern[] {
+  const cutoff = now - windowDays * DAY_MS;
+  return [...state.errorLedger]
+    .filter((e) => e.lastTs >= cutoff)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
+/** Learner dismisses a shown correction: decrement its count, drop the entry at 0. */
+export function dismissCorrection(
+  state: LearnerState,
+  patternTag: string,
+  learnerSaid: string
+): LearnerState {
+  const idx = state.errorLedger.findIndex((e) => e.patternTag === patternTag);
+  if (idx === -1) return state;
+  const entry = state.errorLedger[idx];
+  const nextCount = entry.count - 1;
+  const ledger = [...state.errorLedger];
+  if (nextCount <= 0) {
+    ledger.splice(idx, 1);
+  } else {
+    ledger[idx] = {
+      ...entry,
+      count: nextCount,
+      examples: entry.examples.filter((e) => e.learnerSaid !== learnerSaid),
+    };
+  }
+  return { ...state, errorLedger: ledger };
+}
+
+/** Adds SRS tracking for words not already present; never overwrites an existing entry. */
+export function foldVocabIntoSrs(
+  state: LearnerState,
+  words: string[],
+  now: number
+): LearnerState {
+  const srs = { ...state.vocabSrs };
+  for (const word of words) {
+    if (!srs[word]) srs[word] = newEntry(now);
+  }
+  return { ...state, vocabSrs: srs };
+}
+
+/** Patches fields on the sessionLog entry matching ts; no-op if none matches. */
+export function updateSessionLogEntry(
+  state: LearnerState,
+  ts: number,
+  patch: Partial<SessionLogEntry>
+): LearnerState {
+  const idx = state.sessionLog.findIndex((e) => e.ts === ts);
+  if (idx === -1) return state;
+  const sessionLog = [...state.sessionLog];
+  sessionLog[idx] = { ...sessionLog[idx], ...patch };
+  return { ...state, sessionLog };
+}
+
 export function logSession(state: LearnerState, entry: SessionLogEntry): LearnerState {
   return { ...state, sessionLog: [...state.sessionLog, entry] };
 }

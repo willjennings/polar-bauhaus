@@ -55,4 +55,6 @@ export interface SessionRecord {
   feedback: Feedback | null;
   mode?: "target" | "free" | "review";
   unitId?: string;
+  /** Vocab items under review in a review-mode session, so feedback on them can be retried later. */
+  reviewItems?: string[];
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   defaultLearnerState, recordCorrections, topErrorTags, logSession,
   applyReviewResults, canAdvance, advanceUnit,
+  dismissCorrection, recentErrorFocus, foldVocabIntoSrs, updateSessionLogEntry,
 } from "@/lib/learner";
 import { getUnit } from "@/lib/curriculum";
 
@@ -142,5 +143,85 @@ describe("learner state", () => {
     const s3 = advanceUnit(s2, { ts: T + 1 });
     expect(s3).toEqual(s2);
     expect(s3.completedUnits.filter((u) => u === "u10")).toHaveLength(1);
+  });
+
+  describe("dismissCorrection", () => {
+    it("decrements count and removes the matching example", () => {
+      let s = defaultLearnerState();
+      s = recordCorrections(s, [
+        { learnerSaid: "a1", target: "b1", patternTag: "g-po-opo" },
+        { learnerSaid: "a2", target: "b2", patternTag: "g-po-opo" },
+      ], "u01", T);
+      s = dismissCorrection(s, "g-po-opo", "a1");
+      const entry = s.errorLedger.find((e) => e.patternTag === "g-po-opo")!;
+      expect(entry.count).toBe(1);
+      expect(entry.examples.map((e) => e.learnerSaid)).toEqual(["a2"]);
+    });
+
+    it("removes the entry entirely when count hits 0", () => {
+      let s = defaultLearnerState();
+      s = recordCorrections(s, [{ learnerSaid: "a1", target: "b1", patternTag: "g-po-opo" }], "u01", T);
+      s = dismissCorrection(s, "g-po-opo", "a1");
+      expect(s.errorLedger).toEqual([]);
+    });
+
+    it("is a no-op when the tag is absent", () => {
+      const s = defaultLearnerState();
+      expect(dismissCorrection(s, "g-word-order", "x")).toEqual(s);
+    });
+  });
+
+  describe("recentErrorFocus", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    it("excludes entries outside the recency window", () => {
+      let s = defaultLearnerState();
+      s = recordCorrections(s, [{ learnerSaid: "a", target: "b", patternTag: "g-po-opo" }], "u01", T - 20 * DAY);
+      s = recordCorrections(s, [{ learnerSaid: "a", target: "b", patternTag: "g-word-order" }], "u01", T - 1 * DAY);
+      const focus = recentErrorFocus(s, T, 3, 14);
+      expect(focus.map((e) => e.patternTag)).toEqual(["g-word-order"]);
+    });
+
+    it("still sorts by count desc within the window", () => {
+      let s = defaultLearnerState();
+      s = recordCorrections(s, [
+        { learnerSaid: "a", target: "b", patternTag: "g-word-order" },
+        { learnerSaid: "a", target: "b", patternTag: "g-po-opo" },
+        { learnerSaid: "a", target: "b", patternTag: "g-po-opo" },
+      ], "u01", T);
+      expect(recentErrorFocus(s, T, 2, 14).map((e) => e.patternTag)).toEqual(["g-po-opo", "g-word-order"]);
+    });
+  });
+
+  describe("foldVocabIntoSrs", () => {
+    it("adds new entries for words not already tracked", () => {
+      const s = foldVocabIntoSrs(defaultLearnerState(), ["kumusta", "salamat"], T);
+      expect(s.vocabSrs.kumusta).toEqual({ box: 1, due: T, lapses: 0 });
+      expect(s.vocabSrs.salamat).toEqual({ box: 1, due: T, lapses: 0 });
+    });
+
+    it("does not overwrite an existing entry", () => {
+      let s = defaultLearnerState();
+      s = { ...s, vocabSrs: { kumusta: { box: 3, due: 500, lapses: 1 } } };
+      s = foldVocabIntoSrs(s, ["kumusta"], T);
+      expect(s.vocabSrs.kumusta).toEqual({ box: 3, due: 500, lapses: 1 });
+    });
+  });
+
+  describe("updateSessionLogEntry", () => {
+    it("patches the entry whose ts matches", () => {
+      let s = defaultLearnerState();
+      s = logSession(s, { ts: T, mode: "review", unitId: "u01", corrections: 0, durationMin: 5 });
+      s = updateSessionLogEntry(s, T, { corrections: 4 });
+      expect(s.sessionLog[0].corrections).toBe(4);
+      expect(s.sessionLog[0].unitId).toBe("u01");
+    });
+
+    it("is a no-op when no entry matches the ts", () => {
+      let s = defaultLearnerState();
+      s = logSession(s, { ts: T, mode: "review", unitId: "u01", corrections: 0, durationMin: 5 });
+      const s2 = updateSessionLogEntry(s, T + 999, { corrections: 4 });
+      expect(s2).toEqual(s);
+    });
   });
 });
