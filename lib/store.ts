@@ -70,14 +70,23 @@ export function exportVocabJson(): string {
 
 /**
  * Storage hygiene: sessions beyond the most recent `keepFull` (by startedAt)
- * have their transcript dropped to save space, but ONLY if they already have
- * feedback — a null-feedback session keeps its transcript so retry (see
- * app/sessions/[id]/page.tsx's "Generate feedback" button) stays possible.
+ * have their transcript dropped to save space, but ONLY if either:
+ *  - they already have feedback, or
+ *  - they have null feedback AND no "you" speaker turn at all — a session
+ *    that was skipped (no speech captured) can never be retried into real
+ *    feedback (see app/sessions/[id]/page.tsx's "Generate feedback" button,
+ *    which needs learner speech to work with), so keeping its empty-ish
+ *    transcript around buys nothing.
+ * A null-feedback session that DOES have learner speech keeps its
+ * transcript so retry stays possible.
  */
 export function pruneSessions(keepFull = 30) {
   const sessions = read<SessionRecord>(SESSIONS_KEY).sort((a, b) => b.startedAt - a.startedAt);
-  const pruned = sessions.map((s, i) =>
-    i >= keepFull && s.feedback !== null ? { ...s, transcript: [] } : s
-  );
+  const pruned = sessions.map((s, i) => {
+    if (i < keepFull) return s;
+    const hasFeedback = s.feedback !== null;
+    const unretryableSkip = !hasFeedback && !s.transcript.some((e) => e.speaker === "you");
+    return hasFeedback || unretryableSkip ? { ...s, transcript: [] } : s;
+  });
   write(SESSIONS_KEY, pruned);
 }

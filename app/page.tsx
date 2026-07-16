@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SCENARIOS, TAGLISH_LABELS } from "@/lib/scenarios";
 import { getUnit } from "@/lib/curriculum";
-import { loadLearnerState } from "@/lib/learner";
+import { activeSrsKeys, loadLearnerState } from "@/lib/learner";
 import { dueItems } from "@/lib/srs";
+import { listVocab } from "@/lib/store";
 import { useHydrated } from "@/lib/useHydrated";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -61,7 +62,12 @@ export default function Home() {
         const learner = loadLearnerState();
         const unit = getUnit(learner.currentUnit);
         const now = Date.now();
-        const dueCount = dueItems(learner.vocabSrs, now, 1000).length;
+        const replaced = new Set(
+          listVocab()
+            .filter((v) => v.familyVerified === "replaced")
+            .map((v) => v.tagalog.toLowerCase())
+        );
+        const dueCount = dueItems(activeSrsKeys(learner.vocabSrs, replaced), now, 1000).length;
         const lastTs =
           learner.sessionLog.length > 0
             ? Math.max(...learner.sessionLog.map((s) => s.ts))

@@ -173,6 +173,38 @@ describe("backup", () => {
     expect(listSessions()[0].feedback).not.toBeNull();
   });
 
+  it("on id+startedAt collision, carries the loser's transcript when the winner's is empty", () => {
+    const existing: SessionRecord = {
+      id: "s1",
+      scenarioId: "a",
+      taglishLevel: 1,
+      startedAt: 1,
+      endedAt: 2,
+      transcript: [{ id: "t1", speaker: "you", text: "hi", final: true }],
+      feedback: null,
+    };
+    saveSession(existing);
+    const incoming: SessionRecord = {
+      ...existing,
+      transcript: [], // pruned on the incoming side, but it has feedback so it still wins
+      feedback: { summary: "s", wins: [], corrections: [], vocab: [], encouragement: "e" },
+    };
+    const backup: BackupFile = {
+      version: 1,
+      exportedAt: 0,
+      sessions: [incoming],
+      vocab: [],
+      learner: defaultLearnerState(),
+    };
+    const result = restoreBackup(serializeBackup(backup), 0);
+    expect(result.ok).toBe(true);
+    const saved = listSessions()[0];
+    expect(saved.feedback).not.toBeNull();
+    // Winner (incoming, has feedback) had an empty transcript - the loser's
+    // (existing) non-empty transcript must be carried over rather than lost.
+    expect(saved.transcript).toEqual(existing.transcript);
+  });
+
   it("on id+startedAt collision with feedback on both sides, prefers the later endedAt", () => {
     const existing: SessionRecord = {
       id: "s1",

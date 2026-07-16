@@ -20,6 +20,12 @@ export function buildLiaReviewMarkdown(opts: {
     .filter((v) => v.addedAt >= cutoff)
     .sort((a, b) => b.addedAt - a.addedAt);
 
+  // Keeps the first occurrence per `better` and drops the rest. This module
+  // never sorts `opts.sessions` itself, so which occurrence "wins" is
+  // entirely up to caller order — real callers (e.g. app/lia-prep/page.tsx,
+  // via lib/store.ts's listSessions()) pass sessions newest-first, so in
+  // practice this keeps the MOST RECENT correction for a given `better`,
+  // not the oldest.
   const seenBetter = new Set<string>();
   const corrections: { youSaid: string; better: string; note: string }[] = [];
   for (const s of opts.sessions) {

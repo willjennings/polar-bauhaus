@@ -3,10 +3,11 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { CURRICULUM, defaultLevelForUnit, getUnit, pickSeed, unitIndex } from "@/lib/curriculum";
-import { advanceUnit, canAdvance, loadLearnerState, saveLearnerState, type LearnerState } from "@/lib/learner";
+import { activeSrsKeys, advanceUnit, canAdvance, loadLearnerState, saveLearnerState, type LearnerState } from "@/lib/learner";
 import { buildStatusMarkdown } from "@/lib/exportStatus";
 import { useHydrated } from "@/lib/useHydrated";
 import { dueItems } from "@/lib/srs";
+import { listVocab } from "@/lib/store";
 import { buildBackup, restoreBackup, serializeBackup } from "@/lib/backup";
 import { computeTrends } from "@/lib/trends";
 
@@ -23,7 +24,12 @@ export default function CurriculumPage() {
   const checks = learner.canDoChecks[unit.id] ?? unit.canDo.map(() => false);
   const nextSeed = pickSeed(unit.id, learner.lastSeedId);
   const level = defaultLevelForUnit(unit.id);
-  const hasDue = dueItems(learner.vocabSrs, Date.now(), 1).length > 0;
+  const replacedVocab = new Set(
+    listVocab()
+      .filter((v) => v.familyVerified === "replaced")
+      .map((v) => v.tagalog.toLowerCase())
+  );
+  const hasDue = dueItems(activeSrsKeys(learner.vocabSrs, replacedVocab), Date.now(), 1).length > 0;
 
   const update = (next: LearnerState) => {
     saveLearnerState(next);
@@ -224,12 +230,14 @@ export default function CurriculumPage() {
                       {t.lifelinesPerSession.toFixed(1)} lifelines/session
                     </span>
                   )}
-                  <div className="h-1.5 w-full basis-full rounded-full bg-black/10 dark:bg-white/10 sm:basis-24 sm:flex-1">
-                    <div
-                      className="h-1.5 rounded-full bg-(--accent)"
-                      style={{ width: `${t.talkRatio !== null ? Math.round(t.talkRatio * 100) : 0}%` }}
-                    />
-                  </div>
+                  {t.talkRatio !== null && (
+                    <div className="h-1.5 w-full basis-full rounded-full bg-black/10 dark:bg-white/10 sm:basis-24 sm:flex-1">
+                      <div
+                        className="h-1.5 rounded-full bg-(--accent)"
+                        style={{ width: `${Math.round(t.talkRatio * 100)}%` }}
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

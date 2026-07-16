@@ -88,18 +88,10 @@ describe("buildLiaReviewMarkdown", () => {
     expect(md).not.toContain('"x"');
   });
 
-  it("dedupes corrections by `better`, keeping the first occurrence", () => {
+  it("dedupes corrections by `better`, keeping the most recent occurrence (real callers pass sessions newest-first)", () => {
     const sessions = [
-      session({
-        id: "s1",
-        startedAt: NOW - 3 * DAY,
-        feedback: {
-          summary: "s",
-          corrections: [{ youSaid: "a1", better: "kumain ako", note: "n1" }],
-          vocab: [],
-          encouragement: "e",
-        },
-      }),
+      // Newest first, matching lib/store.ts's listSessions() ordering that
+      // real callers (app/lia-prep/page.tsx) actually pass in.
       session({
         id: "s2",
         startedAt: NOW - 1 * DAY,
@@ -110,12 +102,22 @@ describe("buildLiaReviewMarkdown", () => {
           encouragement: "e",
         },
       }),
+      session({
+        id: "s1",
+        startedAt: NOW - 3 * DAY,
+        feedback: {
+          summary: "s",
+          corrections: [{ youSaid: "a1", better: "kumain ako", note: "n1" }],
+          vocab: [],
+          encouragement: "e",
+        },
+      }),
     ];
     const md = buildLiaReviewMarkdown({ sessions, vocab: [], now: NOW });
     const occurrences = md.split("kumain ako").length - 1;
     expect(occurrences).toBe(1);
-    expect(md).toContain('"a1"');
-    expect(md).not.toContain('"a2"');
+    expect(md).toContain('"a2"');
+    expect(md).not.toContain('"a1"');
   });
 
   it("ignores sessions with null feedback", () => {

@@ -11,7 +11,7 @@ import FeedbackReport from "@/app/components/FeedbackReport";
 import { getSeed, seedToScenario } from "@/lib/curriculum";
 import {
   loadLearnerState, saveLearnerState, recordCorrections, logSession,
-  applyReviewResults, recentErrorFocus, dismissCorrection, foldVocabIntoSrs, type Mode,
+  applyReviewResults, recentErrorFocus, dismissCorrection, foldVocabIntoSrs, activeSrsKeys, type Mode,
 } from "@/lib/learner";
 import { dueItems } from "@/lib/srs";
 import { useHydrated } from "@/lib/useHydrated";
@@ -29,6 +29,8 @@ interface SessionDraft {
   taglishLevel: number;
   entries: TranscriptEntry[];
   reviewItems?: string[];
+  /** Lifeline taps so far this session; absent on drafts written before this field existed. */
+  lifelines?: number;
 }
 
 function loadSessionDraft(): SessionDraft | null {
@@ -56,6 +58,19 @@ function clearSessionDraft() {
   } catch {
     // ignore
   }
+}
+
+/** Lowercased tagalog strings for vocab the family has marked "replaced" — excluded from review/reactivation. */
+function replacedVocabSet(): Set<string> {
+  return new Set(
+    listVocab()
+      .filter((v) => v.familyVerified === "replaced")
+      .map((v) => v.tagalog.toLowerCase())
+  );
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 /** Same merge rule the transcript state uses: replace on final, append text on delta. */
@@ -98,12 +113,18 @@ function Practice() {
   // Bumped after Save/Discard on the recovered-draft banner so it re-reads localStorage.
   const [, setDraftVersion] = useState(0);
   const hydrated = useHydrated();
-  const hasDue = hydrated && dueItems(loadLearnerState().vocabSrs, Date.now(), 1).length > 0;
+  const hasDue =
+    hydrated &&
+    dueItems(activeSrsKeys(loadLearnerState().vocabSrs, replacedVocabSet()), Date.now(), 1).length > 0;
 
   // Audio-only mode: default hidden for free-mode, high-Taglish sessions
   // (listening practice), otherwise visible. A user toggle wins for the
-  // rest of the session regardless of the default.
-  const [hideTranscript, setHideTranscript] = useState(mode === "free" && taglishLevel >= 3);
+  // rest of the session regardless of the default. The default itself is
+  // derived from the CURRENT mode/taglishLevel params on every render
+  // (rather than captured once into state) so it stays correct if those
+  // params change without a full remount.
+  const [transcriptOverride, setTranscriptOverride] = useState<boolean | null>(null);
+  const hideTranscript = transcriptOverride ?? (mode === "free" && taglishLevel >= 3);
 
   const sessionRef = useRef<RealtimeSession | null>(null);
   const entriesRef = useRef<TranscriptEntry[]>([]);
@@ -175,6 +196,7 @@ function Practice() {
               taglishLevel: meta.taglishLevel,
               entries: nextEntries,
               reviewItems: reviewItemsRef.current,
+              lifelines: lifelineCountRef.current,
             });
           }
         }
@@ -212,12 +234,23 @@ function Practice() {
     saveSession(record);
     try {
       let learner = loadLearnerState();
+      const finalEntries = sessionDraft.entries.filter((e) => e.final && e.text.trim());
+      const learnerWords = finalEntries
+        .filter((e) => e.speaker === "you")
+        .reduce((sum, e) => sum + wordCount(e.text), 0);
+      const partnerWords = finalEntries
+        .filter((e) => e.speaker === "partner")
+        .reduce((sum, e) => sum + wordCount(e.text), 0);
       learner = logSession(learner, {
         ts: sessionDraft.startedAt,
         mode: effectiveMode,
         unitId: sessionDraft.unitId,
         corrections: 0,
         durationMin: Math.max(1, Math.round((now - sessionDraft.startedAt) / 60000)),
+        // Older drafts written before the lifelines field existed fall back to 0.
+        lifelines: sessionDraft.lifelines ?? 0,
+        learnerWords,
+        partnerWords,
       });
       saveLearnerState(learner);
     } catch (err) {
@@ -273,6 +306,7 @@ function Practice() {
     startedAtRef.current = Date.now();
     lifelineCountRef.current = 0;
     const reviewVocab = listVocab()
+      .filter((v) => v.familyVerified !== "replaced")
       .slice(0, 8)
       .map((v) => v.tagalog);
     const learner = loadLearnerState();
@@ -285,7 +319,9 @@ function Practice() {
       example: e.examples[0]?.learnerSaid,
     }));
     const reviewItems =
-      mode === "review" ? dueItems(learner.vocabSrs, Date.now(), 12) : undefined;
+      mode === "review"
+        ? dueItems(activeSrsKeys(learner.vocabSrs, replacedVocabSet()), Date.now(), 12)
+        : undefined;
     reviewItemsRef.current = reviewItems;
     // A "review sprint" with no actual due items to review isn't a real
     // review session — log/score it as free instead (F8b). Computed once
@@ -345,7 +381,6 @@ function Practice() {
 
     const transcript = entriesRef.current.filter((e) => e.text.trim());
     const finalEntries = entriesRef.current.filter((e) => e.final && e.text.trim());
-    const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
     const learnerWords = finalEntries
       .filter((e) => e.speaker === "you")
       .reduce((sum, e) => sum + wordCount(e.text), 0);
@@ -573,7 +608,7 @@ function Practice() {
 
       {status === "live" && (
         <button
-          onClick={() => setHideTranscript((v) => !v)}
+          onClick={() => setTranscriptOverride(!hideTranscript)}
           className="self-center rounded-full border border-black/20 px-3 py-1 text-xs opacity-70 hover:opacity-100 dark:border-white/20"
         >
           {hideTranscript ? "🙈 Transcript hidden — tap to show" : "👀 Transcript"}

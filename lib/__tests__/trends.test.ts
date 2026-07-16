@@ -107,7 +107,10 @@ describe("computeTrends", () => {
     expect(bucket.sessions).toBe(2);
     expect(bucket.minutes).toBe(30);
     expect(bucket.talkRatio).toBeCloseTo(40 / 100, 10);
-    expect(bucket.correctionsPer100).toBeCloseTo((100 * 3) / 40, 10);
+    // Only the instrumented entry's 2 corrections count — the legacy
+    // entry's 1 correction has no learnerWords to attribute it to, so it
+    // must not inflate the numerator (was skewed to (100*3)/40 = 7.5).
+    expect(bucket.correctionsPer100).toBeCloseTo((100 * 2) / 40, 10);
     expect(bucket.lifelinesPerSession).toBeCloseTo(1, 10);
   });
 

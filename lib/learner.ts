@@ -166,6 +166,26 @@ export function foldVocabIntoSrs(
   return { ...state, vocabSrs: srs };
 }
 
+/**
+ * Filters vocabSrs down to keys not marked "replaced" by the family (owner
+ * decision: replaced vocab stops being taught/reviewed, but its SRS history
+ * is left untouched in state — only reads for due-item purposes are
+ * filtered). `replaced` must already be lowercased; SRS keys are matched
+ * case-insensitively since they're always lowercased on insert (see
+ * foldVocabIntoSrs).
+ */
+export function activeSrsKeys(
+  srs: Record<string, SrsEntry>,
+  replaced: Set<string>
+): Record<string, SrsEntry> {
+  const out: Record<string, SrsEntry> = {};
+  for (const [key, entry] of Object.entries(srs)) {
+    if (replaced.has(key.toLowerCase())) continue;
+    out[key] = entry;
+  }
+  return out;
+}
+
 /** Patches fields on the sessionLog entry matching ts; no-op if none matches. */
 export function updateSessionLogEntry(
   state: LearnerState,

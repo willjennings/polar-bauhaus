@@ -3,6 +3,7 @@ import {
   defaultLearnerState, recordCorrections, topErrorTags, logSession,
   applyReviewResults, canAdvance, advanceUnit,
   dismissCorrection, recentErrorFocus, foldVocabIntoSrs, updateSessionLogEntry,
+  activeSrsKeys,
 } from "@/lib/learner";
 import { getUnit } from "@/lib/curriculum";
 
@@ -220,6 +221,36 @@ describe("learner state", () => {
       s = foldVocabIntoSrs(s, ["Kumusta"], T);
       expect(s.vocabSrs.kumusta).toEqual({ box: 3, due: 500, lapses: 1 });
       expect(Object.keys(s.vocabSrs)).toEqual(["kumusta"]);
+    });
+  });
+
+  describe("activeSrsKeys", () => {
+    const srs = {
+      kumusta: { box: 1, due: T, lapses: 0 },
+      salamat: { box: 2, due: T, lapses: 0 },
+      opo: { box: 3, due: T, lapses: 1 },
+    };
+
+    it("excludes keys present in the replaced set", () => {
+      const out = activeSrsKeys(srs, new Set(["salamat"]));
+      expect(Object.keys(out).sort()).toEqual(["kumusta", "opo"]);
+    });
+
+    it("matches case-insensitively against a lowercased replaced set", () => {
+      const mixedCaseSrs = { Kumusta: { box: 1, due: T, lapses: 0 }, salamat: srs.salamat };
+      const out = activeSrsKeys(mixedCaseSrs, new Set(["kumusta"]));
+      expect(Object.keys(out)).toEqual(["salamat"]);
+    });
+
+    it("returns everything unchanged when the replaced set is empty", () => {
+      const out = activeSrsKeys(srs, new Set());
+      expect(out).toEqual(srs);
+    });
+
+    it("does not mutate the input srs object", () => {
+      const copy = { ...srs };
+      activeSrsKeys(srs, new Set(["opo"]));
+      expect(srs).toEqual(copy);
     });
   });
 

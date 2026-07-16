@@ -178,10 +178,25 @@ export function mergeLearnerStates(a: LearnerState, b: LearnerState): LearnerSta
 function pickSessionWinner(existing: SessionRecord, incoming: SessionRecord): SessionRecord {
   const existingHasFeedback = existing.feedback !== null;
   const incomingHasFeedback = incoming.feedback !== null;
+  let winner: SessionRecord;
+  let loser: SessionRecord;
   if (existingHasFeedback !== incomingHasFeedback) {
-    return existingHasFeedback ? existing : incoming;
+    winner = existingHasFeedback ? existing : incoming;
+    loser = existingHasFeedback ? incoming : existing;
+  } else if (incoming.endedAt > existing.endedAt) {
+    winner = incoming;
+    loser = existing;
+  } else {
+    winner = existing;
+    loser = incoming;
   }
-  return incoming.endedAt > existing.endedAt ? incoming : existing;
+  // A pruned winner (see lib/store.ts's pruneSessions) shouldn't clobber a
+  // still-intact transcript on the losing side - carry it over rather than
+  // silently dropping the only copy we have left.
+  if (!winner.transcript.length && loser.transcript.length) {
+    return { ...winner, transcript: loser.transcript };
+  }
+  return winner;
 }
 
 /**

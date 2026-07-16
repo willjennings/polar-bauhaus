@@ -115,6 +115,25 @@ describe("store", () => {
       expect(byId["s0"].feedback).toBeNull();
     });
 
+    it("strips transcript on an old, null-feedback session with no 'you' turn (unretryable skip)", () => {
+      for (let i = 0; i < 5; i++) {
+        saveSession(session({ id: `s${i}`, startedAt: T + i, feedback: { summary: "s", corrections: [], vocab: [], encouragement: "e" } }));
+      }
+      // Overwrite the oldest with null feedback and no learner speech at all.
+      saveSession(
+        session({
+          id: "s0",
+          startedAt: T + 0,
+          feedback: null,
+          transcript: [{ id: "t1", speaker: "partner", text: "hi", final: true }],
+        })
+      );
+      pruneSessions(3);
+      const byId = Object.fromEntries(listSessions().map((s) => [s.id, s]));
+      expect(byId["s0"].transcript).toEqual([]);
+      expect(byId["s0"].feedback).toBeNull();
+    });
+
     it("defaults keepFull to 30", () => {
       for (let i = 0; i < 5; i++) {
         saveSession(session({ id: `s${i}`, startedAt: T + i, feedback: { summary: "s", corrections: [], vocab: [], encouragement: "e" } }));

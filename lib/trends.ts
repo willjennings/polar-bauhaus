@@ -23,7 +23,11 @@ export function computeTrends(log: SessionLogEntry[], now: number, weeks = 12): 
     weekEnd: number;
     sessions: number;
     minutes: number;
-    corrections: number;
+    // correctionsPer100 numerator: sum of corrections, but ONLY from entries
+    // that also reported learnerWords — otherwise a legacy entry's
+    // corrections would inflate the count without ever contributing to the
+    // denominator below, skewing the ratio up.
+    correctionsWithWords: number;
     // correctionsPer100 denominator: sum of learnerWords across entries that report it.
     correctionsLearnerWords: number;
     // talkRatio: only entries reporting BOTH learnerWords and partnerWords contribute.
@@ -41,7 +45,7 @@ export function computeTrends(log: SessionLogEntry[], now: number, weeks = 12): 
       weekEnd,
       sessions: 0,
       minutes: 0,
-      corrections: 0,
+      correctionsWithWords: 0,
       correctionsLearnerWords: 0,
       talkLearnerWords: 0,
       talkTotalWords: 0,
@@ -59,9 +63,9 @@ export function computeTrends(log: SessionLogEntry[], now: number, weeks = 12): 
 
     bucket.sessions += 1;
     bucket.minutes += e.durationMin;
-    bucket.corrections += e.corrections;
 
     if (e.learnerWords !== undefined) {
+      bucket.correctionsWithWords += e.corrections;
       bucket.correctionsLearnerWords += e.learnerWords;
     }
     if (e.learnerWords !== undefined && e.partnerWords !== undefined) {
@@ -80,7 +84,7 @@ export function computeTrends(log: SessionLogEntry[], now: number, weeks = 12): 
     minutes: b.minutes,
     talkRatio: b.talkTotalWords > 0 ? b.talkLearnerWords / b.talkTotalWords : null,
     correctionsPer100:
-      b.correctionsLearnerWords > 0 ? (100 * b.corrections) / b.correctionsLearnerWords : null,
+      b.correctionsLearnerWords > 0 ? (100 * b.correctionsWithWords) / b.correctionsLearnerWords : null,
     lifelinesPerSession: b.lifelineEntries > 0 ? b.lifelinesSum / b.lifelineEntries : null,
   }));
 }
