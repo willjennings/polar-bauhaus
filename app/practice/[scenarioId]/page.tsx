@@ -22,9 +22,13 @@ interface SessionDraft {
   startedAt: number;
   scenarioId: string;
   unitId: string;
+  /** The mode the learner picked (target/free/review) before any downgrade. */
   mode: Mode;
+  /** The review→free downgrade applied when a review sprint has no due items (F8b) — this is what actually gets saved. */
+  effectiveMode: Mode;
   taglishLevel: number;
   entries: TranscriptEntry[];
+  reviewItems?: string[];
 }
 
 function loadSessionDraft(): SessionDraft | null {
@@ -105,6 +109,7 @@ function Practice() {
     scenarioId: string;
     unitId: string;
     mode: Mode;
+    effectiveMode: Mode;
     taglishLevel: number;
   } | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -120,6 +125,26 @@ function Practice() {
       wakeLockRef.current?.release().catch(() => {});
     };
   }, []);
+
+  // The wake lock is auto-released by the browser whenever the tab is
+  // backgrounded, so a learner switching apps mid-session and coming back
+  // would otherwise lose it silently. Re-request it on visibilitychange
+  // while the session is live; listener is added/removed with the live
+  // status so it never fires after disconnect/unmount.
+  useEffect(() => {
+    if (status !== "live") return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      navigator.wakeLock
+        ?.request("screen")
+        .then((sentinel) => {
+          wakeLockRef.current = sentinel;
+        })
+        .catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [status]);
 
   const session = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -140,8 +165,10 @@ function Practice() {
               scenarioId: meta.scenarioId,
               unitId: meta.unitId,
               mode: meta.mode,
+              effectiveMode: meta.effectiveMode,
               taglishLevel: meta.taglishLevel,
               entries: nextEntries,
+              reviewItems: reviewItemsRef.current,
             });
           }
         }
@@ -160,6 +187,8 @@ function Practice() {
   const saveDraftSession = () => {
     if (!sessionDraft) return;
     const now = Date.now();
+    // Older drafts written before the effectiveMode field existed fall back to mode.
+    const effectiveMode = sessionDraft.effectiveMode ?? sessionDraft.mode;
     const record: SessionRecord = {
       id: `s-${sessionDraft.startedAt}`,
       scenarioId: sessionDraft.scenarioId,
@@ -168,15 +197,18 @@ function Practice() {
       endedAt: now,
       transcript: sessionDraft.entries.filter((e) => e.text.trim()),
       feedback: null,
-      mode: sessionDraft.mode,
+      mode: effectiveMode,
       unitId: sessionDraft.unitId,
     };
+    if (effectiveMode === "review" && sessionDraft.reviewItems) {
+      record.reviewItems = sessionDraft.reviewItems;
+    }
     saveSession(record);
     try {
       let learner = loadLearnerState();
       learner = logSession(learner, {
         ts: sessionDraft.startedAt,
-        mode: sessionDraft.mode,
+        mode: effectiveMode,
         unitId: sessionDraft.unitId,
         corrections: 0,
         durationMin: Math.max(1, Math.round((now - sessionDraft.startedAt) / 60000)),
@@ -241,12 +273,6 @@ function Practice() {
     // advanced past it — otherwise an old-unit seed gets scored/logged
     // against whatever unit the learner is currently on (F3).
     const sessionUnitId = seedHit ? seedHit.unit.id : learner.currentUnit;
-    sessionMetaRef.current = {
-      scenarioId: scenario.id,
-      unitId: sessionUnitId,
-      mode,
-      taglishLevel,
-    };
     const errorFocus = recentErrorFocus(learner, Date.now(), 3).map((e) => ({
       patternTag: e.patternTag,
       example: e.examples[0]?.learnerSaid,
@@ -254,6 +280,19 @@ function Practice() {
     const reviewItems =
       mode === "review" ? dueItems(learner.vocabSrs, Date.now(), 12) : undefined;
     reviewItemsRef.current = reviewItems;
+    // A "review sprint" with no actual due items to review isn't a real
+    // review session — log/score it as free instead (F8b). Computed once
+    // here (right where reviewItemsRef is set) so every session-draft
+    // snapshot written during the session already reflects the mode hangUp
+    // will ultimately save.
+    const effectiveMode: Mode = mode === "review" && !(reviewItems?.length) ? "free" : mode;
+    sessionMetaRef.current = {
+      scenarioId: scenario.id,
+      unitId: sessionUnitId,
+      mode,
+      effectiveMode,
+      taglishLevel,
+    };
     try {
       await session.connect({
         scenarioId: scenario.id,
@@ -291,9 +330,11 @@ function Practice() {
     const sessionUnitId = seedHit ? seedHit.unit.id : loadLearnerState().currentUnit;
     // A "review sprint" with no actual due items to review (e.g. started
     // before hydration settled, or the queue emptied mid-session) isn't a
-    // real review session — log/score it as free instead (F8b).
+    // real review session — log/score it as free instead (F8b). Sourced from
+    // the same ref the session-draft snapshots use, so the two never drift.
     const effectiveMode: Mode =
-      mode === "review" && !(reviewItemsRef.current?.length) ? "free" : mode;
+      sessionMetaRef.current?.effectiveMode ??
+      (mode === "review" && !(reviewItemsRef.current?.length) ? "free" : mode);
 
     const transcript = entriesRef.current.filter((e) => e.text.trim());
     const record: SessionRecord = {

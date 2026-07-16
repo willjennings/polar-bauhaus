@@ -118,7 +118,7 @@ describe("backup", () => {
     expect(result.ok).toBe(true);
     const ids = listSessions().map((s) => s.id);
     expect(ids).toContain("s1");
-    expect(ids).toContain("s1-imported");
+    expect(ids).toContain("s1-imported-999");
   });
 
   it("does not duplicate a session with the same id and startedAt", () => {
@@ -142,6 +142,62 @@ describe("backup", () => {
     const result = restoreBackup(serializeBackup(backup), 0);
     expect(result.ok).toBe(true);
     expect(listSessions()).toHaveLength(1);
+  });
+
+  it("on id+startedAt collision, prefers the record with non-null feedback", () => {
+    const existing: SessionRecord = {
+      id: "s1",
+      scenarioId: "a",
+      taglishLevel: 1,
+      startedAt: 1,
+      endedAt: 2,
+      transcript: [],
+      feedback: null,
+    };
+    saveSession(existing);
+    const incoming: SessionRecord = {
+      ...existing,
+      endedAt: 2, // same endedAt - only the feedback differs
+      feedback: { summary: "s", wins: [], corrections: [], vocab: [], encouragement: "e" },
+    };
+    const backup: BackupFile = {
+      version: 1,
+      exportedAt: 0,
+      sessions: [incoming],
+      vocab: [],
+      learner: defaultLearnerState(),
+    };
+    const result = restoreBackup(serializeBackup(backup), 0);
+    expect(result.ok).toBe(true);
+    expect(listSessions()).toHaveLength(1);
+    expect(listSessions()[0].feedback).not.toBeNull();
+  });
+
+  it("on id+startedAt collision with feedback on both sides, prefers the later endedAt", () => {
+    const existing: SessionRecord = {
+      id: "s1",
+      scenarioId: "a",
+      taglishLevel: 1,
+      startedAt: 1,
+      endedAt: 100,
+      transcript: [],
+      feedback: { summary: "old", wins: [], corrections: [], vocab: [], encouragement: "e" },
+    };
+    saveSession(existing);
+    const incoming: SessionRecord = {
+      ...existing,
+      endedAt: 200,
+      feedback: { summary: "new", wins: [], corrections: [], vocab: [], encouragement: "e" },
+    };
+    const backup: BackupFile = {
+      version: 1,
+      exportedAt: 0,
+      sessions: [incoming],
+      vocab: [],
+      learner: defaultLearnerState(),
+    };
+    restoreBackup(serializeBackup(backup), 0);
+    expect(listSessions()[0].feedback?.summary).toBe("new");
   });
 
   it("merges vocab by lowercase tagalog, existing wins", () => {
@@ -219,7 +275,7 @@ describe("mergeLearnerStates", () => {
     expect(merged.vocabSrs.salamat.due).toBe(50);
   });
 
-  it("errorLedger: sums counts, takes max lastTs, unitId from the newer entry, unions examples capped at 3", () => {
+  it("errorLedger: takes max (not sum) of counts, max lastTs, unitId from the newer entry, unions examples capped at 3", () => {
     const a = {
       ...defaultLearnerState(),
       errorLedger: [
@@ -253,10 +309,29 @@ describe("mergeLearnerStates", () => {
     };
     const merged = mergeLearnerStates(a, b);
     const entry = merged.errorLedger.find((e) => e.patternTag === "g-po-opo")!;
-    expect(entry.count).toBe(5);
+    // Max, not sum: mergeLearnerStates must be idempotent (merging a state
+    // with itself, e.g. via a round-trip backup, must not double-count).
+    expect(entry.count).toBe(3);
     expect(entry.lastTs).toBe(T + 100);
     expect(entry.unitId).toBe("u02");
     expect(entry.examples).toHaveLength(3);
+  });
+
+  it("errorLedger: two entries with equal lastTs (same history synced twice) merge to the same count, not a sum", () => {
+    const a = {
+      ...defaultLearnerState(),
+      errorLedger: [
+        { patternTag: "g-po-opo", count: 4, lastTs: T, unitId: "u01", examples: [{ learnerSaid: "x1", target: "y1" }] },
+      ],
+    };
+    const b = {
+      ...defaultLearnerState(),
+      errorLedger: [
+        { patternTag: "g-po-opo", count: 4, lastTs: T, unitId: "u01", examples: [{ learnerSaid: "x1", target: "y1" }] },
+      ],
+    };
+    const merged = mergeLearnerStates(a, b);
+    expect(merged.errorLedger.find((e) => e.patternTag === "g-po-opo")!.count).toBe(4);
   });
 
   it("canDoChecks: element-wise OR per unit key", () => {
@@ -317,5 +392,91 @@ describe("mergeLearnerStates", () => {
     const emptyA = { ...defaultLearnerState(), lastSeedId: "seed-a" };
     const emptyB = { ...defaultLearnerState(), lastSeedId: "seed-b" };
     expect(mergeLearnerStates(emptyA, emptyB).lastSeedId).toBe("seed-a");
+  });
+});
+
+/** A learner state populated in every field, already in canonical (sorted/deduped) form. */
+function richLearnerState() {
+  return {
+    ...defaultLearnerState(),
+    currentUnit: "u04",
+    completedUnits: ["u01", "u02", "u03"],
+    vocabSrs: {
+      kumusta: { box: 2, due: 500, lapses: 0 },
+      salamat: { box: 3, due: 100, lapses: 1 },
+    },
+    errorLedger: [
+      {
+        patternTag: "g-po-opo",
+        count: 3,
+        lastTs: T,
+        unitId: "u02",
+        examples: [
+          { learnerSaid: "x1", target: "y1" },
+          { learnerSaid: "x2", target: "y2" },
+        ],
+      },
+    ],
+    sessionLog: [
+      { ts: T - 10, mode: "target" as const, unitId: "u01", corrections: 0, durationMin: 5 },
+      { ts: T, mode: "review" as const, unitId: "u02", corrections: 1, durationMin: 8 },
+    ],
+    canDoChecks: { u01: [true, true], u02: [true, false] },
+    overrides: [{ ts: T - 10, unitId: "u01" }],
+    lastSeedId: "seed-x",
+  };
+}
+
+describe("merge idempotency", () => {
+  beforeEach(() => {
+    freshWindow();
+  });
+
+  afterEach(() => {
+    delete (globalThis as unknown as { window?: unknown }).window;
+  });
+
+  it("mergeLearnerStates(s, s) deep-equals s", () => {
+    const s = richLearnerState();
+    expect(mergeLearnerStates(s, s)).toEqual(s);
+  });
+
+  it("restoring a just-built backup into unchanged stores changes nothing, counts included", () => {
+    const session: SessionRecord = {
+      id: "s1",
+      scenarioId: "cooking",
+      taglishLevel: 3,
+      startedAt: 1000,
+      endedAt: 2000,
+      transcript: [],
+      feedback: { summary: "s", wins: [], corrections: [], vocab: [], encouragement: "e" },
+    };
+    saveSession(session);
+    const vocab: VocabItem = {
+      tagalog: "kumusta",
+      english: "how are you",
+      example: "Kumusta ka?",
+      scenarioId: "cooking",
+      addedAt: 500,
+    };
+    addVocab([vocab]);
+    const learner = richLearnerState();
+    saveLearnerState(learner);
+
+    const backup = buildBackup(9999);
+    const json = serializeBackup(backup);
+
+    // Restore the same backup back into the SAME (unchanged) stores it came from.
+    const result = restoreBackup(json, 10000);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.summary).toContain("Added 0 session");
+      expect(result.summary).toContain("0 vocab");
+    }
+
+    expect(listSessions()).toHaveLength(1);
+    expect(listSessions()[0]).toEqual(session);
+    expect(listVocab()).toHaveLength(1);
+    expect(loadLearnerState()).toEqual(learner);
   });
 });

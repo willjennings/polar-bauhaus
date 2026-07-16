@@ -77,7 +77,6 @@ function buildFeedbackSchema(opts: {
   if (opts.drillTargets) {
     schema.properties.drillScores = {
       type: "array",
-      minItems: 1,
       items: {
         type: "object",
         additionalProperties: false,

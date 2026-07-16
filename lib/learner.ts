@@ -138,7 +138,12 @@ export function dismissCorrection(
   return { ...state, errorLedger: ledger };
 }
 
-/** Adds SRS tracking for words not already present; never overwrites an existing entry. */
+/**
+ * Adds SRS tracking for words not already present; never overwrites an
+ * existing entry. New keys are lowercased so vocab that only differs by
+ * capitalization (e.g. sentence-initial "Kumusta" vs "kumusta") folds into
+ * one SRS entry; existing stored keys are left exactly as they are.
+ */
 export function foldVocabIntoSrs(
   state: LearnerState,
   words: string[],
@@ -146,7 +151,8 @@ export function foldVocabIntoSrs(
 ): LearnerState {
   const srs = { ...state.vocabSrs };
   for (const word of words) {
-    if (!srs[word]) srs[word] = newEntry(now);
+    const key = word.toLowerCase();
+    if (!srs[key]) srs[key] = newEntry(now);
   }
   return { ...state, vocabSrs: srs };
 }

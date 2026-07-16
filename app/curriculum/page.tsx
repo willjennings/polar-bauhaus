@@ -53,13 +53,17 @@ export default function CurriculumPage() {
   };
 
   const restore = async (file: File) => {
-    const text = await file.text();
-    const result = restoreBackup(text, Date.now());
-    if (result.ok) {
-      window.alert(result.summary);
-      setState(loadLearnerState());
-    } else {
-      window.alert(`Restore failed: ${result.error}`);
+    try {
+      const text = await file.text();
+      const result = restoreBackup(text, Date.now());
+      if (result.ok) {
+        window.alert(result.summary);
+        setState(loadLearnerState());
+      } else {
+        window.alert(`Restore failed: ${result.error}`);
+      }
+    } catch (err) {
+      window.alert(`Restore failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

@@ -200,11 +200,26 @@ describe("learner state", () => {
       expect(s.vocabSrs.salamat).toEqual({ box: 1, due: T, lapses: 0 });
     });
 
+    it("lowercases new keys on insert", () => {
+      const s = foldVocabIntoSrs(defaultLearnerState(), ["Kumusta", "SALAMAT"], T);
+      expect(s.vocabSrs.kumusta).toEqual({ box: 1, due: T, lapses: 0 });
+      expect(s.vocabSrs.salamat).toEqual({ box: 1, due: T, lapses: 0 });
+      expect(s.vocabSrs.Kumusta).toBeUndefined();
+    });
+
     it("does not overwrite an existing entry", () => {
       let s = defaultLearnerState();
       s = { ...s, vocabSrs: { kumusta: { box: 3, due: 500, lapses: 1 } } };
       s = foldVocabIntoSrs(s, ["kumusta"], T);
       expect(s.vocabSrs.kumusta).toEqual({ box: 3, due: 500, lapses: 1 });
+    });
+
+    it("treats a differently-cased word as already tracked (case-insensitive lookup by lowercased key)", () => {
+      let s = defaultLearnerState();
+      s = { ...s, vocabSrs: { kumusta: { box: 3, due: 500, lapses: 1 } } };
+      s = foldVocabIntoSrs(s, ["Kumusta"], T);
+      expect(s.vocabSrs.kumusta).toEqual({ box: 3, due: 500, lapses: 1 });
+      expect(Object.keys(s.vocabSrs)).toEqual(["kumusta"]);
     });
   });
 
