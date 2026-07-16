@@ -8,6 +8,7 @@ import { buildStatusMarkdown } from "@/lib/exportStatus";
 import { useHydrated } from "@/lib/useHydrated";
 import { dueItems } from "@/lib/srs";
 import { buildBackup, restoreBackup, serializeBackup } from "@/lib/backup";
+import { computeTrends } from "@/lib/trends";
 
 export default function CurriculumPage() {
   const hydrated = useHydrated();
@@ -187,6 +188,53 @@ export default function CurriculumPage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="rounded-xl border border-black/10 p-4 dark:border-white/10">
+        <h2 className="font-semibold">Trends (last 12 weeks)</h2>
+        {(() => {
+          const trends = computeTrends(learner.sessionLog, Date.now()).map((w, i, arr) => ({
+            ...w,
+            weeksAgo: arr.length - 1 - i,
+          }));
+          const firstNonEmpty = trends.findIndex((w) => w.sessions > 0);
+          const visible = firstNonEmpty === -1 ? [] : trends.slice(firstNonEmpty);
+          if (visible.length === 0) {
+            return <p className="mt-2 text-sm opacity-60">No sessions logged yet.</p>;
+          }
+          return (
+            <ul className="mt-3 flex flex-col gap-2">
+              {visible.map((t) => (
+                <li key={t.weekStart} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <span className="w-14 shrink-0 font-medium opacity-70">W-{t.weeksAgo}</span>
+                  <span className="w-20 shrink-0 opacity-80">{t.sessions} sessions</span>
+                  <span className="w-16 shrink-0 opacity-80">{t.minutes}m</span>
+                  {t.talkRatio !== null && (
+                    <span className="w-28 shrink-0 opacity-80">
+                      you spoke {Math.round(t.talkRatio * 100)}%
+                    </span>
+                  )}
+                  {t.correctionsPer100 !== null && (
+                    <span className="w-28 shrink-0 opacity-80">
+                      {t.correctionsPer100.toFixed(1)} corr/100w
+                    </span>
+                  )}
+                  {t.lifelinesPerSession !== null && (
+                    <span className="opacity-80">
+                      {t.lifelinesPerSession.toFixed(1)} lifelines/session
+                    </span>
+                  )}
+                  <div className="h-1.5 w-full basis-full rounded-full bg-black/10 dark:bg-white/10 sm:basis-24 sm:flex-1">
+                    <div
+                      className="h-1.5 rounded-full bg-(--accent)"
+                      style={{ width: `${t.talkRatio !== null ? Math.round(t.talkRatio * 100) : 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
       </section>
 
       <section className="rounded-xl border border-black/10 p-4 dark:border-white/10">

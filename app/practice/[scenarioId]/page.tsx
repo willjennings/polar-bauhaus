@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { getScenario, TAGLISH_LABELS, VOICES } from "@/lib/scenarios";
 import { RealtimeSession, type SessionStatus } from "@/lib/realtime";
-import { addVocab, getSession, listSessions, listVocab, saveSession } from "@/lib/store";
+import { addVocab, getSession, listSessions, listVocab, pruneSessions, saveSession } from "@/lib/store";
 import type { Correction, Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
 import FeedbackReport from "@/app/components/FeedbackReport";
 import { getSeed, seedToScenario } from "@/lib/curriculum";
@@ -100,11 +100,17 @@ function Practice() {
   const hydrated = useHydrated();
   const hasDue = hydrated && dueItems(loadLearnerState().vocabSrs, Date.now(), 1).length > 0;
 
+  // Audio-only mode: default hidden for free-mode, high-Taglish sessions
+  // (listening practice), otherwise visible. A user toggle wins for the
+  // rest of the session regardless of the default.
+  const [hideTranscript, setHideTranscript] = useState(mode === "free" && taglishLevel >= 3);
+
   const sessionRef = useRef<RealtimeSession | null>(null);
   const entriesRef = useRef<TranscriptEntry[]>([]);
   const startedAtRef = useRef(0);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const reviewItemsRef = useRef<string[] | undefined>(undefined);
+  const lifelineCountRef = useRef(0);
   const sessionMetaRef = useRef<{
     scenarioId: string;
     unitId: string;
@@ -265,6 +271,7 @@ function Practice() {
     setFeedback(null);
     setFeedbackState("idle");
     startedAtRef.current = Date.now();
+    lifelineCountRef.current = 0;
     const reviewVocab = listVocab()
       .slice(0, 8)
       .map((v) => v.tagalog);
@@ -337,6 +344,15 @@ function Practice() {
       (mode === "review" && !(reviewItemsRef.current?.length) ? "free" : mode);
 
     const transcript = entriesRef.current.filter((e) => e.text.trim());
+    const finalEntries = entriesRef.current.filter((e) => e.final && e.text.trim());
+    const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+    const learnerWords = finalEntries
+      .filter((e) => e.speaker === "you")
+      .reduce((sum, e) => sum + wordCount(e.text), 0);
+    const partnerWords = finalEntries
+      .filter((e) => e.speaker === "partner")
+      .reduce((sum, e) => sum + wordCount(e.text), 0);
+    const lifelines = lifelineCountRef.current;
     const record: SessionRecord = {
       id: `s-${startedAtRef.current}`,
       scenarioId: scenario.id,
@@ -352,6 +368,7 @@ function Practice() {
     const spoke = transcript.some((e) => e.speaker === "you");
     if (!spoke) {
       saveSession(record);
+      pruneSessions();
       setSavedSessionId(record.id);
       setFeedbackState("skipped");
       clearSessionDraft();
@@ -401,6 +418,9 @@ function Practice() {
           drillScores: fb.drillScores
             ? Object.fromEntries(fb.drillScores.map((d) => [d.targetId, d.score]))
             : undefined,
+          lifelines,
+          learnerWords,
+          partnerWords,
         });
         saveLearnerState(learner);
       } catch (err) {
@@ -419,6 +439,9 @@ function Practice() {
           unitId: sessionUnitId,
           corrections: 0,
           durationMin: Math.max(1, Math.round((now - startedAtRef.current) / 60000)),
+          lifelines,
+          learnerWords,
+          partnerWords,
         });
         saveLearnerState(learner);
       } catch (err) {
@@ -427,6 +450,7 @@ function Practice() {
     }
     if (effectiveMode === "review") record.reviewItems = reviewItemsRef.current;
     saveSession(record);
+    pruneSessions();
     setSavedSessionId(record.id);
     clearSessionDraft();
   };
@@ -547,24 +571,41 @@ function Practice() {
         </div>
       )}
 
+      {status === "live" && (
+        <button
+          onClick={() => setHideTranscript((v) => !v)}
+          className="self-center rounded-full border border-black/20 px-3 py-1 text-xs opacity-70 hover:opacity-100 dark:border-white/20"
+        >
+          {hideTranscript ? "🙈 Transcript hidden — tap to show" : "👀 Transcript"}
+        </button>
+      )}
+
       {(status === "live" || status === "ended" || entries.length > 0) && (
         <div className="flex max-h-[50vh] min-h-40 flex-col gap-2 overflow-y-auto rounded-xl border border-black/10 p-4 dark:border-white/10">
-          {entries.length === 0 && (
-            <p className="text-sm italic opacity-50">Waiting for your kausap to speak…</p>
+          {hideTranscript && status === "live" ? (
+            <p className="text-sm italic opacity-50">
+              Transcript hidden — listening practice. {entries.filter((e) => e.final).length} turns so far.
+            </p>
+          ) : (
+            <>
+              {entries.length === 0 && (
+                <p className="text-sm italic opacity-50">Waiting for your kausap to speak…</p>
+              )}
+              {entries.map((e) => (
+                <div key={e.id} className={e.speaker === "you" ? "text-right" : "text-left"}>
+                  <span
+                    className={`inline-block max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                      e.speaker === "you"
+                        ? "bg-(--accent) text-white"
+                        : "bg-black/5 dark:bg-white/10"
+                    } ${e.final ? "" : "opacity-70"}`}
+                  >
+                    {e.text}
+                  </span>
+                </div>
+              ))}
+            </>
           )}
-          {entries.map((e) => (
-            <div key={e.id} className={e.speaker === "you" ? "text-right" : "text-left"}>
-              <span
-                className={`inline-block max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                  e.speaker === "you"
-                    ? "bg-(--accent) text-white"
-                    : "bg-black/5 dark:bg-white/10"
-                } ${e.final ? "" : "opacity-70"}`}
-              >
-                {e.text}
-              </span>
-            </div>
-          ))}
           <div ref={transcriptEndRef} />
         </div>
       )}
@@ -572,7 +613,10 @@ function Practice() {
       {status === "live" && (
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => session?.lifeline()}
+            onClick={() => {
+              lifelineCountRef.current += 1;
+              session?.lifeline();
+            }}
             className="rounded-full bg-(--accent-warm) px-5 py-3 font-medium text-white hover:opacity-90"
             title="Stuck? Get the phrase you need."
           >

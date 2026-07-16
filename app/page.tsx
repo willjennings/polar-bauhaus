@@ -6,7 +6,10 @@ import Link from "next/link";
 import { SCENARIOS, TAGLISH_LABELS } from "@/lib/scenarios";
 import { getUnit } from "@/lib/curriculum";
 import { loadLearnerState } from "@/lib/learner";
+import { dueItems } from "@/lib/srs";
 import { useHydrated } from "@/lib/useHydrated";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TAGLISH_KEY = "kausap.taglishLevel";
 
@@ -55,18 +58,36 @@ export default function Home() {
       </section>
 
       {hydrated && (() => {
-        const unit = getUnit(loadLearnerState().currentUnit);
-        return unit ? (
-          <Link
-            href="/curriculum"
-            className="rounded-xl border border-black/10 p-4 transition hover:border-accent dark:border-white/10"
-          >
-            <span className="text-sm opacity-70">Now learning</span>
-            <div className="font-semibold">
-              {unit.id} — {unit.title}
-            </div>
-          </Link>
-        ) : null;
+        const learner = loadLearnerState();
+        const unit = getUnit(learner.currentUnit);
+        const now = Date.now();
+        const dueCount = dueItems(learner.vocabSrs, now, 1000).length;
+        const lastTs =
+          learner.sessionLog.length > 0
+            ? Math.max(...learner.sessionLog.map((s) => s.ts))
+            : null;
+        const daysAgo = lastTs === null ? null : Math.floor((now - lastTs) / DAY_MS);
+        const sessionsThisWeek = learner.sessionLog.filter((s) => now - s.ts <= 7 * DAY_MS).length;
+        return (
+          <div className="flex flex-col gap-1.5">
+            {unit && (
+              <Link
+                href="/curriculum"
+                className="rounded-xl border border-black/10 p-4 transition hover:border-accent dark:border-white/10"
+              >
+                <span className="text-sm opacity-70">Now learning</span>
+                <div className="font-semibold">
+                  {unit.id} — {unit.title}
+                </div>
+              </Link>
+            )}
+            <p className="text-xs opacity-60">
+              ⚡ {dueCount} words due · last session{" "}
+              {daysAgo === null ? "never" : daysAgo === 0 ? "today" : `${daysAgo} days ago`} ·{" "}
+              {sessionsThisWeek} sessions this week
+            </p>
+          </div>
+        );
       })()}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
