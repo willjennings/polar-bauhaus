@@ -32,6 +32,8 @@ export interface VocabItem {
   example: string;
   scenarioId: string;
   addedAt: number;
+  /** Lia's native-speaker register review: true/false = checked, "replaced" = family uses different wording. */
+  familyVerified?: boolean | "replaced";
 }
 
 export interface Feedback {

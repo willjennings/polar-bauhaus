@@ -26,6 +26,10 @@ export interface SessionLogEntry {
   corrections: number;
   durationMin: number;
   drillScores?: Record<string, number>;
+  /** Instrumentation added in Tier 2; UI wires these in Tier 2B. */
+  lifelines?: number;
+  learnerWords?: number;
+  partnerWords?: number;
 }
 
 export interface LearnerState {
@@ -54,11 +58,16 @@ export function defaultLearnerState(): LearnerState {
 
 export function loadLearnerState(): LearnerState {
   if (typeof window === "undefined") return defaultLearnerState();
+  const raw = window.localStorage.getItem(LEARNER_KEY);
+  if (!raw) return defaultLearnerState();
   try {
-    const raw = window.localStorage.getItem(LEARNER_KEY);
-    if (!raw) return defaultLearnerState();
     return { ...defaultLearnerState(), ...(JSON.parse(raw) as LearnerState) };
   } catch {
+    try {
+      window.localStorage.setItem(`${LEARNER_KEY}.corrupt`, raw);
+    } catch {
+      // Best-effort backup of the corrupt payload; ignore secondary failure.
+    }
     return defaultLearnerState();
   }
 }

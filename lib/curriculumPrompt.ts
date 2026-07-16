@@ -70,5 +70,10 @@ Run the scene as a quick, playful game. Create brisk natural moments that force 
 One item per exchange, warm energy. Do not define a word for them unless they fail twice.`;
   }
 
-  return [payload, scope, recycling, errorFocus, mode].filter(Boolean).join("\n");
+  const pronunciation = `
+## Pronunciation (you can hear the learner)
+
+At most once or twice per session, when the learner's pronunciation of a Tagalog word would sound off to a family member — wrong syllable stress, reduced vowels, a dropped final glottal stop — echo that word correctly and naturally inside your in-character recast, with slight emphasis. Never lecture about pronunciation; the echo IS the correction.`;
+
+  return [payload, scope, recycling, errorFocus, mode, pronunciation].filter(Boolean).join("\n");
 }

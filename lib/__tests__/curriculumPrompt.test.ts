@@ -43,6 +43,21 @@ describe("curriculum prompt blocks", () => {
     expect(buildCurriculumBlocks({ mode: "free", currentUnit: "u99", errorFocus: [] })).toBe("");
   });
 
+  it("appends a pronunciation-echo block for free mode", () => {
+    const s = buildCurriculumBlocks({ mode: "free", currentUnit: "u03", errorFocus: [] });
+    expect(s).toContain("## Pronunciation");
+    expect(s.toLowerCase()).toContain("echo");
+  });
+
+  it("appends a pronunciation-echo block for target mode", () => {
+    const s = buildCurriculumBlocks({ mode: "target", currentUnit: "u06", errorFocus: [] });
+    expect(s).toContain("## Pronunciation");
+  });
+
+  it("still returns empty string for an unknown unit even though pronunciation is otherwise unconditional", () => {
+    expect(buildCurriculumBlocks({ mode: "target", currentUnit: "u99", errorFocus: [] })).toBe("");
+  });
+
   it("review mode with no due items renders no review sprint block", () => {
     const s = buildCurriculumBlocks({
       mode: "review", currentUnit: "u05", errorFocus: [], reviewItems: [],

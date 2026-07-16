@@ -566,8 +566,8 @@ export function defaultLevelForUnit(id: string): number {
   if (i < 0) return 3;
   if (i < 2) return 2;   // u01–u02
   if (i < 5) return 3;   // u03–u05
-  if (i < 8) return 4;   // u06–u08
-  return 5;              // u09–u10
+  // u06–u10 stay at 4: level 5 stays available on the manual dial; home Taglish is the target register.
+  return 4;
 }
 
 export function getSeed(seedId: string): { unit: Unit; seed: SceneSeed } | undefined {

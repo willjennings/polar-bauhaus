@@ -49,11 +49,12 @@ describe("curriculum spine", () => {
     expect(new Set(tags).size).toBe(tags.length);  // no duplicates
   });
 
-  it("defaultLevelForUnit ramps 2 → 5", () => {
+  it("defaultLevelForUnit ramps 2 → 4, capped (level 5 stays manual-dial-only)", () => {
     expect(defaultLevelForUnit("u01")).toBe(2);
     expect(defaultLevelForUnit("u04")).toBe(3);
     expect(defaultLevelForUnit("u07")).toBe(4);
-    expect(defaultLevelForUnit("u10")).toBe(5);
+    expect(defaultLevelForUnit("u09")).toBe(4);
+    expect(defaultLevelForUnit("u10")).toBe(4);
   });
 
   it("getSeed finds a seed with its unit", () => {
