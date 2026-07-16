@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { API_BASE_URL, authHeaders, getApiKey } from "@/lib/openai-server";
+import { getApiKey } from "@/lib/openai-server";
+import { chatJson } from "@/lib/chatJson";
 import type { TranscriptEntry } from "@/lib/types";
 import { allowedPatternTags, getUnit } from "@/lib/curriculum";
 
@@ -74,6 +75,7 @@ function buildFeedbackSchema(opts: {
   if (opts.drillTargets) {
     schema.properties.drillScores = {
       type: "array",
+      minItems: opts.drillTargets.length,
       items: {
         type: "object",
         additionalProperties: false,
@@ -152,52 +154,31 @@ export async function POST(req: NextRequest) {
         : "")
     : "";
 
-  const res = await fetch(`${API_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      ...authHeaders(apiKey),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: FEEDBACK_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a supportive Tagalog tutor reviewing a voice-conversation transcript from a heritage learner " +
-            "(understands a lot, struggles to produce; their home Taglish register is the target variety, NOT " +
-            "textbook Tagalog). Review ONLY the LEARNER lines, strengths first: begin by finding 2-5 genuine wins — " +
-            "things they successfully produced or communicated, quoting their words. Then pick the 3-6 most useful " +
-            "corrections of GENUINE errors only (broken verb forms, wrong markers, wrong words). Code-switching into " +
-            "English is never an error — do not correct it; at most, offer the Tagalog version as an additive " +
-            "'you could also say'. Natural colloquial phrasing beats textbook forms. Extract up to 8 vocabulary " +
-            "items worth keeping, prioritizing words the partner taught or the learner reached for. Transcripts come " +
-            "from speech recognition, so ignore likely mis-transcriptions rather than correcting them." +
-            curriculumNote,
-        },
-        { role: "user", content: dialogue },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "session_feedback", strict: true, schema },
-      },
-    }),
+  const result = await chatJson({
+    apiKey,
+    model: FEEDBACK_MODEL,
+    system:
+      "You are a supportive Tagalog tutor reviewing a voice-conversation transcript from a heritage learner " +
+      "(understands a lot, struggles to produce; their home Taglish register is the target variety, NOT " +
+      "textbook Tagalog). Review ONLY the LEARNER lines, strengths first: begin by finding 2-5 genuine wins — " +
+      "things they successfully produced or communicated, quoting their words. Then pick the 3-6 most useful " +
+      "corrections of GENUINE errors only (broken verb forms, wrong markers, wrong words). Code-switching into " +
+      "English is never an error — do not correct it; at most, offer the Tagalog version as an additive " +
+      "'you could also say'. Natural colloquial phrasing beats textbook forms. Extract up to 8 vocabulary " +
+      "items worth keeping, prioritizing words the partner taught or the learner reached for. Transcripts come " +
+      "from speech recognition, so ignore likely mis-transcriptions rather than correcting them." +
+      curriculumNote,
+    user: dialogue,
+    schemaName: "session_feedback",
+    schema,
   });
 
-  if (!res.ok) {
-    const detail = await res.text();
-    console.error("feedback request failed:", res.status, detail);
+  if (!result.ok) {
     return NextResponse.json(
-      { error: `Feedback generation failed (${res.status}).` },
+      { error: `Feedback generation failed (${result.status}).` },
       { status: 502 }
     );
   }
 
-  const data = await res.json();
-  try {
-    const feedback = JSON.parse(data.choices[0].message.content);
-    return NextResponse.json({ feedback });
-  } catch {
-    return NextResponse.json({ error: "Could not parse feedback." }, { status: 502 });
-  }
+  return NextResponse.json({ feedback: result.data });
 }

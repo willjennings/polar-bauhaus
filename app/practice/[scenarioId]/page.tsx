@@ -14,6 +14,7 @@ import {
   applyReviewResults, topErrorTags, type Mode,
 } from "@/lib/learner";
 import { dueItems } from "@/lib/srs";
+import { useHydrated } from "@/lib/useHydrated";
 
 export default function PracticePage() {
   return (
@@ -43,6 +44,8 @@ function Practice() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [feedbackState, setFeedbackState] = useState<"idle" | "loading" | "done" | "error" | "skipped">("idle");
   const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  const hydrated = useHydrated();
+  const hasDue = hydrated && dueItems(loadLearnerState().vocabSrs, Date.now(), 1).length > 0;
 
   const sessionRef = useRef<RealtimeSession | null>(null);
   const entriesRef = useRef<TranscriptEntry[]>([]);
@@ -102,6 +105,10 @@ function Practice() {
       .slice(0, 8)
       .map((v) => v.tagalog);
     const learner = loadLearnerState();
+    // A seed replays that scene's own unit, even if the learner has since
+    // advanced past it — otherwise an old-unit seed gets scored/logged
+    // against whatever unit the learner is currently on (F3).
+    const sessionUnitId = seedHit ? seedHit.unit.id : learner.currentUnit;
     const errorFocus = topErrorTags(learner, 3).map((e) => ({
       patternTag: e.patternTag,
       example: e.examples[0]?.learnerSaid,
@@ -116,12 +123,15 @@ function Practice() {
         voice: voice ?? scenario.voice,
         reviewVocab,
         mode,
-        currentUnit: learner.currentUnit,
+        currentUnit: sessionUnitId,
         errorFocus,
         reviewItems,
         seedId: seedHit?.seed.id,
       });
-      if (seedHit) saveLearnerState({ ...learner, lastSeedId: seedHit.seed.id });
+      // Reload fresh state right before saving: the connect() await may have
+      // let another save (e.g. from hangUp of a prior session) land in
+      // between, and saving the stale pre-await snapshot would clobber it (F4).
+      if (seedHit) saveLearnerState({ ...loadLearnerState(), lastSeedId: seedHit.seed.id });
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");
@@ -133,6 +143,13 @@ function Practice() {
     session?.disconnect();
     setStatus("ended");
 
+    const sessionUnitId = seedHit ? seedHit.unit.id : loadLearnerState().currentUnit;
+    // A "review sprint" with no actual due items to review (e.g. started
+    // before hydration settled, or the queue emptied mid-session) isn't a
+    // real review session — log/score it as free instead (F8b).
+    const effectiveMode: Mode =
+      mode === "review" && !(reviewItemsRef.current?.length) ? "free" : mode;
+
     const transcript = entriesRef.current.filter((e) => e.text.trim());
     const record: SessionRecord = {
       id: `s-${startedAtRef.current}`,
@@ -142,8 +159,8 @@ function Practice() {
       endedAt: Date.now(),
       transcript,
       feedback: null,
-      mode,
-      unitId: loadLearnerState().currentUnit,
+      mode: effectiveMode,
+      unitId: sessionUnitId,
     };
 
     const spoke = transcript.some((e) => e.speaker === "you");
@@ -161,8 +178,8 @@ function Practice() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           transcript,
-          mode,
-          currentUnit: loadLearnerState().currentUnit,
+          mode: effectiveMode,
+          currentUnit: sessionUnitId,
           reviewItems: reviewItemsRef.current,
         }),
       });
@@ -174,26 +191,33 @@ function Practice() {
       addVocab(
         fb.vocab.map((v) => ({ ...v, scenarioId: scenario.id, addedAt: Date.now() }))
       );
-      let learner = loadLearnerState();
-      const now = Date.now();
-      learner = recordCorrections(
-        learner,
-        fb.corrections.map((c) => ({ learnerSaid: c.youSaid, target: c.better, patternTag: c.patternTag })),
-        learner.currentUnit,
-        now
-      );
-      if (fb.reviewResults) learner = applyReviewResults(learner, fb.reviewResults, now);
-      learner = logSession(learner, {
-        ts: startedAtRef.current,
-        mode,
-        unitId: learner.currentUnit,
-        corrections: fb.corrections.length,
-        durationMin: Math.max(1, Math.round((now - startedAtRef.current) / 60000)),
-        drillScores: fb.drillScores
-          ? Object.fromEntries(fb.drillScores.map((d) => [d.targetId, d.score]))
-          : undefined,
-      });
-      saveLearnerState(learner);
+      // A failure folding this report into learner state (e.g. localStorage
+      // full/blocked) shouldn't flip an otherwise-successful report to an
+      // error screen — the feedback itself already rendered fine (F5).
+      try {
+        let learner = loadLearnerState();
+        const now = Date.now();
+        learner = recordCorrections(
+          learner,
+          fb.corrections.map((c) => ({ learnerSaid: c.youSaid, target: c.better, patternTag: c.patternTag })),
+          sessionUnitId,
+          now
+        );
+        if (fb.reviewResults) learner = applyReviewResults(learner, fb.reviewResults, now);
+        learner = logSession(learner, {
+          ts: startedAtRef.current,
+          mode: effectiveMode,
+          unitId: sessionUnitId,
+          corrections: fb.corrections.length,
+          durationMin: Math.max(1, Math.round((now - startedAtRef.current) / 60000)),
+          drillScores: fb.drillScores
+            ? Object.fromEntries(fb.drillScores.map((d) => [d.targetId, d.score]))
+            : undefined,
+        });
+        saveLearnerState(learner);
+      } catch (err) {
+        console.error("learner state update failed:", err);
+      }
     } catch {
       setFeedbackState("error");
     }
@@ -230,19 +254,21 @@ function Practice() {
             and hit the lifeline any time you&apos;re stuck.
           </p>
           <div className="mb-4 flex items-center justify-center gap-2 text-sm">
-            {(["target", "free", "review"] as const).map((m) => (
-              <Link
-                key={m}
-                href={`/practice/${scenarioId}?level=${taglishLevel}&mode=${m}${seedId ? `&seed=${seedId}` : ""}`}
-                className={`rounded-full border px-3 py-1 ${
-                  mode === m
-                    ? "border-(--accent) bg-(--accent) text-white"
-                    : "border-black/20 dark:border-white/20"
-                }`}
-              >
-                {m === "target" ? "🎬 Target scene" : m === "free" ? "🗣️ Free scene" : "⚡ Review sprint"}
-              </Link>
-            ))}
+            {(["target", "free", "review"] as const)
+              .filter((m) => m !== "review" || hasDue)
+              .map((m) => (
+                <Link
+                  key={m}
+                  href={`/practice/${scenarioId}?level=${taglishLevel}&mode=${m}${seedId ? `&seed=${seedId}` : ""}`}
+                  className={`rounded-full border px-3 py-1 ${
+                    mode === m
+                      ? "border-(--accent) bg-(--accent) text-white"
+                      : "border-black/20 dark:border-white/20"
+                  }`}
+                >
+                  {m === "target" ? "🎬 Target scene" : m === "free" ? "🗣️ Free scene" : "⚡ Review sprint"}
+                </Link>
+              ))}
           </div>
           <div className="mb-4 flex items-center justify-center gap-2 text-sm">
             <label htmlFor="voice" className="opacity-70">

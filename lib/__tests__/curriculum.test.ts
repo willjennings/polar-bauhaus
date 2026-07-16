@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CURRICULUM, GENERIC_PATTERN_TAGS, getUnit, unitIndex, acquiredUnits,
   allowedPatternTags, defaultLevelForUnit, getSeed, pickSeed, seedToScenario,
-  validateCurriculum,
+  resolveScenario, validateCurriculum,
 } from "@/lib/curriculum";
 
 describe("curriculum spine", () => {
@@ -85,5 +85,20 @@ describe("curriculum spine", () => {
   it("getUnit and unitIndex behave for unknown ids", () => {
     expect(getUnit("u99")).toBeUndefined();
     expect(unitIndex("u99")).toBe(-1);
+  });
+
+  // F7: session history stores whatever id the practice session used, which
+  // may be a curriculum scene seed id (not present in SCENARIOS) or a
+  // curated SCENARIOS id — resolveScenario should handle both plus unknowns.
+  it("resolveScenario resolves a curriculum scene seed id", () => {
+    expect(resolveScenario("s-adobo")?.description).toContain("adobo");
+  });
+
+  it("resolveScenario resolves a curated SCENARIOS id", () => {
+    expect(resolveScenario("cooking")?.id).toBe("cooking");
+  });
+
+  it("resolveScenario returns undefined for an unknown id", () => {
+    expect(resolveScenario("no-such-scenario")).toBeUndefined();
   });
 });

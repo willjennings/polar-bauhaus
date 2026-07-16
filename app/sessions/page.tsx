@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { listSessions } from "@/lib/store";
-import { getScenario, TAGLISH_LABELS } from "@/lib/scenarios";
+import { TAGLISH_LABELS } from "@/lib/scenarios";
+import { resolveScenario } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/useHydrated";
 
 export default function SessionsPage() {
@@ -51,7 +52,7 @@ export default function SessionsPage() {
         ))}
       </div>
       {sessions.map((s) => {
-        const scenario = getScenario(s.scenarioId);
+        const scenario = resolveScenario(s.scenarioId);
         const minutes = Math.max(1, Math.round((s.endedAt - s.startedAt) / 60000));
         return (
           <Link

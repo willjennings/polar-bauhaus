@@ -6,7 +6,7 @@
  * or exercises here (TAGALOG-PLAY.md A§5). Will maps unit numbers to his
  * physical textbook manually.
  */
-import type { Scenario } from "./scenarios";
+import { getScenario, type Scenario } from "./scenarios";
 
 export interface GrammarTarget {
   id: string;
@@ -600,6 +600,17 @@ export function seedToScenario(seed: SceneSeed, unit: Unit): Scenario {
       `Season the dialogue with these words when natural: ${seed.propsVocab.join(", ")}.`,
     opening: seed.opening,
   };
+}
+
+/**
+ * Resolves an id from session history to a Scenario, whether it's a curated
+ * SCENARIOS entry or a curriculum scene seed (seeds aren't in SCENARIOS, so
+ * plain getScenario lookups against seed ids miss and fall back to raw ids).
+ */
+export function resolveScenario(id: string): Scenario | undefined {
+  const hit = getSeed(id);
+  if (hit) return seedToScenario(hit.seed, hit.unit);
+  return getScenario(id);
 }
 
 /** Returns human-readable constraint violations; empty array = valid. */

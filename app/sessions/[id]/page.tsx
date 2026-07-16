@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getSession } from "@/lib/store";
-import { getScenario, TAGLISH_LABELS } from "@/lib/scenarios";
+import { TAGLISH_LABELS } from "@/lib/scenarios";
+import { resolveScenario } from "@/lib/curriculum";
 import { useHydrated } from "@/lib/useHydrated";
 import FeedbackReport from "@/app/components/FeedbackReport";
 
@@ -24,7 +25,7 @@ export default function SessionDetailPage() {
     );
   }
 
-  const scenario = getScenario(record.scenarioId);
+  const scenario = resolveScenario(record.scenarioId);
 
   return (
     <div className="flex flex-col gap-5">

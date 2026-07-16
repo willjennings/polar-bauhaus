@@ -134,13 +134,27 @@ export function canAdvance(state: LearnerState): { ok: boolean; reasons: string[
     reasons.push("Need two completed Target Scenes for this unit");
   } else {
     for (const t of unit.grammarTargets) {
-      const low = targetScenes.some((d) => (d.drillScores?.[t.id] ?? 0) < 80);
-      if (low) reasons.push(`Accuracy below 80% on ${t.id} in the last two Target Scenes`);
+      const measurements = targetScenes
+        .map((d) => d.drillScores?.[t.id])
+        .filter((s): s is number => s !== undefined);
+      if (measurements.length < 2) {
+        reasons.push(`Not yet measured twice in Target Scenes: ${t.id}`);
+      } else if (measurements.some((s) => s < 80)) {
+        reasons.push(`Accuracy below 80% on ${t.id} in the last two Target Scenes`);
+      }
     }
   }
 
   const unitTags = new Set(unit.grammarTargets.map((t) => t.id));
-  const offending = topErrorTags(state, 3).filter((e) => unitTags.has(e.patternTag));
+  // The offending tag only blocks if it recurred during the last two Target
+  // Scenes (i.e. it's still live), not merely at some point in all-time history.
+  let offending: ErrorPattern[] = [];
+  if (targetScenes.length >= 2) {
+    const earliestQualifyingTs = targetScenes[0].ts;
+    offending = topErrorTags(state, 3).filter(
+      (e) => unitTags.has(e.patternTag) && e.lastTs >= earliestQualifyingTs
+    );
+  }
   if (offending.length > 0)
     reasons.push(
       `Current-unit patterns still in your top errors: ${offending.map((e) => e.patternTag).join(", ")}`
@@ -156,16 +170,17 @@ export function advanceUnit(
 ): LearnerState {
   const i = unitIndex(state.currentUnit);
   const unit = CURRICULUM[i];
-  const next = CURRICULUM[i + 1];
-  if (!unit || !next) return state;
+  if (!unit) return state;
+  if (state.completedUnits.includes(unit.id)) return state;
 
+  const next = CURRICULUM[i + 1];
   const srs = { ...state.vocabSrs };
   for (const v of unit.vocab) {
     if (!srs[v.tl]) srs[v.tl] = newEntry(opts.ts);
   }
   return {
     ...state,
-    currentUnit: next.id,
+    currentUnit: next ? next.id : state.currentUnit,
     completedUnits: [...state.completedUnits, unit.id],
     vocabSrs: srs,
     overrides: opts.override

@@ -124,12 +124,12 @@ export default function CurriculumPage() {
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => advance(false)}
-            disabled={!gate.ok || currentIdx === CURRICULUM.length - 1}
+            disabled={!gate.ok || learner.completedUnits.includes(unit.id)}
             className="rounded-full bg-(--accent) px-4 py-1.5 text-sm text-white disabled:opacity-40"
           >
-            Advance ➜
+            {currentIdx === CURRICULUM.length - 1 ? "Complete final unit ✓" : "Advance ➜"}
           </button>
-          {!gate.ok && currentIdx < CURRICULUM.length - 1 && (
+          {!gate.ok && !learner.completedUnits.includes(unit.id) && (
             <button
               onClick={() => advance(true)}
               className="rounded-full border border-black/20 px-4 py-1.5 text-sm opacity-70 dark:border-white/20"
