@@ -1,6 +1,12 @@
-import type { Feedback } from "@/lib/types";
+import type { Correction, Feedback } from "@/lib/types";
 
-export default function FeedbackReport({ feedback }: { feedback: Feedback }) {
+export default function FeedbackReport({
+  feedback,
+  onDismiss,
+}: {
+  feedback: Feedback;
+  onDismiss?: (c: Correction) => void;
+}) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-black/10 p-5 dark:border-white/10">
       <div>
@@ -27,7 +33,18 @@ export default function FeedbackReport({ feedback }: { feedback: Feedback }) {
           <ul className="mt-2 flex flex-col gap-3">
             {feedback.corrections.map((c, i) => (
               <li key={i} className="rounded-lg bg-black/5 p-3 text-sm dark:bg-white/5">
-                <p className="opacity-70">You said: {c.youSaid}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="opacity-70">You said: {c.youSaid}</p>
+                  {onDismiss && (
+                    <button
+                      onClick={() => onDismiss(c)}
+                      title="Not what I said — remove"
+                      className="shrink-0 text-xs opacity-50 hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 <p className="mt-0.5 font-medium text-accent-warm">Also works: {c.better}</p>
                 <p className="mt-1 text-xs opacity-70">
                   {c.note}

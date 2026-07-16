@@ -7,6 +7,8 @@ import { allowedPatternTags, getUnit } from "@/lib/curriculum";
 // On Azure this is the *deployment name*, not the model name.
 const FEEDBACK_MODEL = process.env.FEEDBACK_MODEL ?? "gpt-4o-mini";
 
+export const maxDuration = 60;
+
 const BASE_FEEDBACK_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -75,7 +77,7 @@ function buildFeedbackSchema(opts: {
   if (opts.drillTargets) {
     schema.properties.drillScores = {
       type: "array",
-      minItems: opts.drillTargets.length,
+      minItems: 1,
       items: {
         type: "object",
         additionalProperties: false,
@@ -147,7 +149,7 @@ export async function POST(req: NextRequest) {
       `Tag every correction with exactly one patternTag from the allowed list. ` +
       `REMINDER, now enforced in the tags too: code-switching into English is NEVER an error, including English content words dropped into an otherwise Tagalog sentence and English words combined directly with Tagalog markers/particles (e.g. "about sa new project", "sa office", "ng project", "sa break room") — these are normal heritage-speaker Taglish, not word-order or vocab errors. Never emit a correction, and therefore never a patternTag, for any of this; only correct a sentence if it has a genuine Tagalog-side grammar error (wrong affix, wrong marker between two Tagalog words, wrong aspect) independent of the code-switching. ` +
       (drillTargets
-        ? `This was a TARGET SCENE: additionally score the learner 0-100 on each grammar target (${drillTargets.join(", ")}) based on how accurately they produced it when the scene called for it; justify each score in one line quoting them. A target the scene never elicited scores by absence of evidence: 50 with a note. `
+        ? `This was a TARGET SCENE: additionally score the learner 0-100 on each grammar target (${drillTargets.join(", ")}) based on how accurately they produced it when the scene called for it; justify each score in one line quoting them. Include a score for every target the scene actually elicited; OMIT any target the scene gave the learner no real chance to produce — do not guess or default. `
         : "") +
       (mode === "review" && reviewItems.length > 0
         ? `This was a REVIEW SPRINT probing these items: ${reviewItems.join(", ")}. For each, judge whether the learner recalled and used it (recalled=true/false). `
@@ -166,7 +168,8 @@ export async function POST(req: NextRequest) {
       "English is never an error — do not correct it; at most, offer the Tagalog version as an additive " +
       "'you could also say'. Natural colloquial phrasing beats textbook forms. Extract up to 8 vocabulary " +
       "items worth keeping, prioritizing words the partner taught or the learner reached for. Transcripts come " +
-      "from speech recognition, so ignore likely mis-transcriptions rather than correcting them." +
+      "from speech recognition, so ignore likely mis-transcriptions rather than correcting them. " +
+      "Any phrase the partner taught in response to a Lifeline request must appear in the vocab list." +
       curriculumNote,
     user: dialogue,
     schemaName: "session_feedback",

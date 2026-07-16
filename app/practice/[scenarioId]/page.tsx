@@ -5,16 +5,63 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { getScenario, TAGLISH_LABELS, VOICES } from "@/lib/scenarios";
 import { RealtimeSession, type SessionStatus } from "@/lib/realtime";
-import { addVocab, listVocab, saveSession } from "@/lib/store";
-import type { Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
+import { addVocab, getSession, listSessions, listVocab, saveSession } from "@/lib/store";
+import type { Correction, Feedback, SessionRecord, TranscriptEntry } from "@/lib/types";
 import FeedbackReport from "@/app/components/FeedbackReport";
 import { getSeed, seedToScenario } from "@/lib/curriculum";
 import {
   loadLearnerState, saveLearnerState, recordCorrections, logSession,
-  applyReviewResults, topErrorTags, type Mode,
+  applyReviewResults, recentErrorFocus, dismissCorrection, foldVocabIntoSrs, type Mode,
 } from "@/lib/learner";
 import { dueItems } from "@/lib/srs";
 import { useHydrated } from "@/lib/useHydrated";
+
+const SESSION_DRAFT_KEY = "kausap.sessionDraft";
+
+interface SessionDraft {
+  startedAt: number;
+  scenarioId: string;
+  unitId: string;
+  mode: Mode;
+  taglishLevel: number;
+  entries: TranscriptEntry[];
+}
+
+function loadSessionDraft(): SessionDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SESSION_DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SessionDraft;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionDraft(draft: SessionDraft) {
+  try {
+    window.localStorage.setItem(SESSION_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // Best-effort — a full/blocked localStorage shouldn't interrupt the live session.
+  }
+}
+
+function clearSessionDraft() {
+  try {
+    window.localStorage.removeItem(SESSION_DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Same merge rule the transcript state uses: replace on final, append text on delta. */
+function mergeTranscriptEntry(prev: TranscriptEntry[], entry: TranscriptEntry): TranscriptEntry[] {
+  const i = prev.findIndex((e) => e.id === entry.id);
+  if (i === -1) return [...prev, entry];
+  const next = [...prev];
+  next[i] = entry.final ? entry : { ...next[i], text: next[i].text + entry.text };
+  return next;
+}
 
 export default function PracticePage() {
   return (
@@ -44,6 +91,8 @@ function Practice() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [feedbackState, setFeedbackState] = useState<"idle" | "loading" | "done" | "error" | "skipped">("idle");
   const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  // Bumped after Save/Discard on the recovered-draft banner so it re-reads localStorage.
+  const [, setDraftVersion] = useState(0);
   const hydrated = useHydrated();
   const hasDue = hydrated && dueItems(loadLearnerState().vocabSrs, Date.now(), 1).length > 0;
 
@@ -52,6 +101,13 @@ function Practice() {
   const startedAtRef = useRef(0);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const reviewItemsRef = useRef<string[] | undefined>(undefined);
+  const sessionMetaRef = useRef<{
+    scenarioId: string;
+    unitId: string;
+    mode: Mode;
+    taglishLevel: number;
+  } | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   useEffect(() => {
     entriesRef.current = entries;
@@ -59,7 +115,10 @@ function Practice() {
   }, [entries]);
 
   useEffect(() => {
-    return () => sessionRef.current?.disconnect();
+    return () => {
+      sessionRef.current?.disconnect();
+      wakeLockRef.current?.release().catch(() => {});
+    };
   }, []);
 
   const session = useMemo(() => {
@@ -70,18 +129,91 @@ function Practice() {
         setStatusDetail(detail ?? "");
       },
       onTranscript: (entry) => {
-        setEntries((prev) => {
-          const i = prev.findIndex((e) => e.id === entry.id);
-          if (i === -1) return [...prev, entry];
-          const next = [...prev];
-          next[i] = entry.final
-            ? entry
-            : { ...next[i], text: next[i].text + entry.text };
-          return next;
-        });
+        setEntries((prev) => mergeTranscriptEntry(prev, entry));
+        if (entry.final) {
+          const meta = sessionMetaRef.current;
+          if (meta) {
+            const nextEntries = mergeTranscriptEntry(entriesRef.current, entry);
+            entriesRef.current = nextEntries;
+            writeSessionDraft({
+              startedAt: startedAtRef.current,
+              scenarioId: meta.scenarioId,
+              unitId: meta.unitId,
+              mode: meta.mode,
+              taglishLevel: meta.taglishLevel,
+              entries: nextEntries,
+            });
+          }
+        }
       },
     });
   }, []);
+
+  // Recovery banner for an interrupted session (crash/refresh before hangUp saved it).
+  const sessionDraft = hydrated ? loadSessionDraft() : null;
+  const draftHasSpeech = !!sessionDraft?.entries.some((e) => e.speaker === "you" && e.final);
+  const draftAlreadySaved = sessionDraft
+    ? listSessions().some((s) => s.startedAt === sessionDraft.startedAt)
+    : false;
+  const showDraftBanner = hydrated && !!sessionDraft && draftHasSpeech && !draftAlreadySaved;
+
+  const saveDraftSession = () => {
+    if (!sessionDraft) return;
+    const now = Date.now();
+    const record: SessionRecord = {
+      id: `s-${sessionDraft.startedAt}`,
+      scenarioId: sessionDraft.scenarioId,
+      taglishLevel: sessionDraft.taglishLevel,
+      startedAt: sessionDraft.startedAt,
+      endedAt: now,
+      transcript: sessionDraft.entries.filter((e) => e.text.trim()),
+      feedback: null,
+      mode: sessionDraft.mode,
+      unitId: sessionDraft.unitId,
+    };
+    saveSession(record);
+    try {
+      let learner = loadLearnerState();
+      learner = logSession(learner, {
+        ts: sessionDraft.startedAt,
+        mode: sessionDraft.mode,
+        unitId: sessionDraft.unitId,
+        corrections: 0,
+        durationMin: Math.max(1, Math.round((now - sessionDraft.startedAt) / 60000)),
+      });
+      saveLearnerState(learner);
+    } catch (err) {
+      console.error("learner state update failed:", err);
+    }
+    clearSessionDraft();
+    setDraftVersion((v) => v + 1);
+  };
+
+  const discardDraftSession = () => {
+    clearSessionDraft();
+    setDraftVersion((v) => v + 1);
+  };
+
+  const handleDismiss = (c: Correction) => {
+    const isSame = (x: Correction) => x.youSaid === c.youSaid && x.better === c.better && x.note === c.note;
+    try {
+      let learner = loadLearnerState();
+      learner = dismissCorrection(learner, c.patternTag ?? "", c.youSaid);
+      saveLearnerState(learner);
+    } catch (err) {
+      console.error("dismissCorrection failed:", err);
+    }
+    setFeedback((prev) => (prev ? { ...prev, corrections: prev.corrections.filter((x) => !isSame(x)) } : prev));
+    if (savedSessionId) {
+      const rec = getSession(savedSessionId);
+      if (rec?.feedback) {
+        saveSession({
+          ...rec,
+          feedback: { ...rec.feedback, corrections: rec.feedback.corrections.filter((x) => !isSame(x)) },
+        });
+      }
+    }
+  };
 
   if (!scenario) {
     return (
@@ -109,7 +241,13 @@ function Practice() {
     // advanced past it — otherwise an old-unit seed gets scored/logged
     // against whatever unit the learner is currently on (F3).
     const sessionUnitId = seedHit ? seedHit.unit.id : learner.currentUnit;
-    const errorFocus = topErrorTags(learner, 3).map((e) => ({
+    sessionMetaRef.current = {
+      scenarioId: scenario.id,
+      unitId: sessionUnitId,
+      mode,
+      taglishLevel,
+    };
+    const errorFocus = recentErrorFocus(learner, Date.now(), 3).map((e) => ({
       patternTag: e.patternTag,
       example: e.examples[0]?.learnerSaid,
     }));
@@ -132,6 +270,11 @@ function Practice() {
       // let another save (e.g. from hangUp of a prior session) land in
       // between, and saving the stale pre-await snapshot would clobber it (F4).
       if (seedHit) saveLearnerState({ ...loadLearnerState(), lastSeedId: seedHit.seed.id });
+      try {
+        wakeLockRef.current = (await navigator.wakeLock?.request("screen")) ?? null;
+      } catch {
+        wakeLockRef.current = null;
+      }
     } catch (err) {
       setStatus("error");
       setStatusDetail(err instanceof Error ? err.message : "Could not start the session.");
@@ -142,6 +285,8 @@ function Practice() {
   const hangUp = async () => {
     session?.disconnect();
     setStatus("ended");
+    wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
 
     const sessionUnitId = seedHit ? seedHit.unit.id : loadLearnerState().currentUnit;
     // A "review sprint" with no actual due items to review (e.g. started
@@ -168,6 +313,7 @@ function Practice() {
       saveSession(record);
       setSavedSessionId(record.id);
       setFeedbackState("skipped");
+      clearSessionDraft();
       return;
     }
 
@@ -204,6 +350,7 @@ function Practice() {
           now
         );
         if (fb.reviewResults) learner = applyReviewResults(learner, fb.reviewResults, now);
+        learner = foldVocabIntoSrs(learner, fb.vocab.map((v) => v.tagalog), now);
         learner = logSession(learner, {
           ts: startedAtRef.current,
           mode: effectiveMode,
@@ -220,9 +367,27 @@ function Practice() {
       }
     } catch {
       setFeedbackState("error");
+      // Feedback generation failed, but the learner still gets credit for the
+      // session so streaks/logs aren't lost — retryable later from /sessions.
+      try {
+        let learner = loadLearnerState();
+        const now = Date.now();
+        learner = logSession(learner, {
+          ts: startedAtRef.current,
+          mode: effectiveMode,
+          unitId: sessionUnitId,
+          corrections: 0,
+          durationMin: Math.max(1, Math.round((now - startedAtRef.current) / 60000)),
+        });
+        saveLearnerState(learner);
+      } catch (err) {
+        console.error("learner state update failed:", err);
+      }
     }
+    if (effectiveMode === "review") record.reviewItems = reviewItemsRef.current;
     saveSession(record);
     setSavedSessionId(record.id);
+    clearSessionDraft();
   };
 
   const toggleMute = () => {
@@ -249,6 +414,27 @@ function Practice() {
 
       {status === "idle" && (
         <div className="rounded-xl border border-black/10 p-6 text-center dark:border-white/10">
+          {showDraftBanner && sessionDraft && (
+            <div className="mb-4 rounded-lg border border-(--accent) bg-(--accent)/5 p-3 text-sm">
+              <p>
+                You have an unfinished session from {new Date(sessionDraft.startedAt).toLocaleString()}.
+              </p>
+              <div className="mt-2 flex justify-center gap-2">
+                <button
+                  onClick={saveDraftSession}
+                  className="rounded-full bg-(--accent) px-3 py-1 text-white"
+                >
+                  Save it
+                </button>
+                <button
+                  onClick={discardDraftSession}
+                  className="rounded-full border border-black/20 px-3 py-1 dark:border-white/20"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          )}
           <p className="mb-4 text-sm opacity-70">
             You&apos;ll need your microphone. Your kausap speaks first — just respond naturally,
             and hit the lifeline any time you&apos;re stuck.
@@ -307,9 +493,16 @@ function Practice() {
         <div className="rounded-xl border border-red-500/40 bg-red-500/5 p-4 text-sm">
           <p className="font-medium text-red-600 dark:text-red-400">Something went wrong</p>
           <p className="mt-1 opacity-80">{statusDetail}</p>
-          <button onClick={start} className="mt-3 rounded-full border border-current px-4 py-1.5 text-sm">
-            Try again
-          </button>
+          <div className="mt-3 flex gap-2">
+            <button onClick={start} className="rounded-full border border-current px-4 py-1.5 text-sm">
+              Try again
+            </button>
+            {entries.some((e) => e.speaker === "you" && e.final) && (
+              <button onClick={hangUp} className="rounded-full border border-current px-4 py-1.5 text-sm">
+                🏁 End &amp; get feedback
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -383,7 +576,9 @@ function Practice() {
               .
             </p>
           )}
-          {feedbackState === "done" && feedback && <FeedbackReport feedback={feedback} />}
+          {feedbackState === "done" && feedback && (
+            <FeedbackReport feedback={feedback} onDismiss={handleDismiss} />
+          )}
           <div className="flex justify-center gap-3">
             <button
               onClick={start}
