@@ -5,7 +5,7 @@ import { getUnit } from "@/lib/curriculum";
 
 const MODEL = process.env.FEEDBACK_MODEL ?? "gpt-4o-mini";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const SCHEMA = {
   type: "object",

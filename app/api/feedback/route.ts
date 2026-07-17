@@ -7,7 +7,7 @@ import { allowedPatternTags, getUnit } from "@/lib/curriculum";
 // On Azure this is the *deployment name*, not the model name.
 const FEEDBACK_MODEL = process.env.FEEDBACK_MODEL ?? "gpt-4o-mini";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const BASE_FEEDBACK_SCHEMA = {
   type: "object",
