@@ -6,7 +6,7 @@ import Link from "next/link";
 import { SCENARIOS, TAGLISH_LABELS } from "@/lib/scenarios";
 import { getUnit } from "@/lib/curriculum";
 import { activeSrsKeys, loadLearnerState } from "@/lib/learner";
-import { dueItems } from "@/lib/srs";
+import { dueCount } from "@/lib/srs";
 import { listVocab } from "@/lib/store";
 import { useHydrated } from "@/lib/useHydrated";
 
@@ -67,7 +67,7 @@ export default function Home() {
             .filter((v) => v.familyVerified === "replaced")
             .map((v) => v.tagalog.toLowerCase())
         );
-        const dueCount = dueItems(activeSrsKeys(learner.vocabSrs, replaced), now, 1000).length;
+        const dueTotal = dueCount(activeSrsKeys(learner.vocabSrs, replaced), now);
         const lastTs =
           learner.sessionLog.length > 0
             ? Math.max(...learner.sessionLog.map((s) => s.ts))
@@ -88,7 +88,7 @@ export default function Home() {
               </Link>
             )}
             <p className="text-xs opacity-60">
-              ⚡ {dueCount} words due · last session{" "}
+              ⚡ {dueTotal} words due · last session{" "}
               {daysAgo === null ? "never" : daysAgo === 0 ? "today" : `${daysAgo} days ago`} ·{" "}
               {sessionsThisWeek} sessions this week
             </p>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { newEntry, reviewResult, dueItems, BOX_INTERVALS_DAYS } from "@/lib/srs";
+import { newEntry, reviewResult, dueItems, dueCount, BOX_INTERVALS_DAYS } from "@/lib/srs";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -33,5 +33,14 @@ describe("srs", () => {
     };
     expect(dueItems(srs, 1000)).toEqual(["b", "a"]);
     expect(dueItems(srs, 1000, 1)).toEqual(["b"]);
+  });
+
+  it("dueCount counts all due items, ignoring dueItems's display cap", () => {
+    const srs: Record<string, { box: number; due: number; lapses: number }> = {};
+    for (let i = 0; i < 30; i++) srs[`k${i}`] = { box: 1, due: 100, lapses: 0 };
+    srs["future"] = { box: 1, due: 5000, lapses: 0 };
+    // dueItems caps at 12 by default; dueCount must see all 30 due, excluding the future one.
+    expect(dueItems(srs, 1000).length).toBe(12);
+    expect(dueCount(srs, 1000)).toBe(30);
   });
 });

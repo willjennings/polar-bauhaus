@@ -34,3 +34,8 @@ export function dueItems(
     .slice(0, limit)
     .map(([k]) => k);
 }
+
+/** Total number of due items, ignoring dueItems()'s display cap. */
+export function dueCount(srs: Record<string, SrsEntry>, now: number): number {
+  return Object.values(srs).filter((e) => e.due <= now).length;
+}

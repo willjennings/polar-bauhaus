@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_BASE_URL, WEBRTC_CALLS_URL, authHeaders, getApiKey } from "@/lib/openai-server";
 import { buildInstructions, getScenario, VOICES } from "@/lib/scenarios";
-import { buildCurriculumBlocks, type CurriculumContext } from "@/lib/curriculumPrompt";
+import { buildCurriculumBlocks, type CurriculumContext, type ErrorFocusItem } from "@/lib/curriculumPrompt";
 import { getSeed, getUnit, seedToScenario } from "@/lib/curriculum";
 
 // On Azure this is the *deployment name*, not the model name.
@@ -43,13 +43,13 @@ export async function POST(req: NextRequest) {
     typeof body.currentUnit === "string" && getUnit(body.currentUnit) ? body.currentUnit : null;
   const errorFocus: CurriculumContext["errorFocus"] = Array.isArray(body.errorFocus)
     ? body.errorFocus
-        .filter((e: unknown): e is { patternTag: string; example?: string } =>
+        .filter((e: unknown): e is ErrorFocusItem =>
           typeof e === "object" && e !== null &&
           typeof (e as { patternTag?: unknown }).patternTag === "string" &&
           (e as { patternTag: string }).patternTag.length <= 40
         )
         .slice(0, 3)
-        .map((e: { patternTag: string; example?: string }) => ({
+        .map((e: ErrorFocusItem) => ({
           patternTag: e.patternTag,
           example: typeof e.example === "string" ? e.example.slice(0, 120) : undefined,
         }))

@@ -1,6 +1,6 @@
 /** D7: one-click markdown status summary for pasting into a Claude chat. */
 import { getUnit } from "./curriculum";
-import { dueItems } from "./srs";
+import { dueCount } from "./srs";
 import { topErrorTags, type LearnerState } from "./learner";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -9,7 +9,7 @@ export function buildStatusMarkdown(state: LearnerState, now: number): string {
   const unit = getUnit(state.currentUnit);
   const week = state.sessionLog.filter((s) => s.ts >= now - WEEK);
   const lastTarget = [...state.sessionLog].reverse().find((s) => s.mode === "target" && s.drillScores);
-  const due = dueItems(state.vocabSrs, now, 1000).length;
+  const due = dueCount(state.vocabSrs, now);
   const total = Object.keys(state.vocabSrs).length;
   const checks = unit ? (state.canDoChecks[unit.id] ?? []) : [];
 

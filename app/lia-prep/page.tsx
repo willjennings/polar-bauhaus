@@ -89,8 +89,8 @@ export default function LiaPrepPage() {
       {prompts && (
         <div className="rounded-xl border border-black/10 p-4 dark:border-white/10">
           <ul className="space-y-3">
-            {prompts.map((p) => (
-              <li key={p.tagalog}>
+            {prompts.map((p, i) => (
+              <li key={`${i}-${p.tagalog}`}>
                 <p className="font-medium">{p.tagalog}</p>
                 <p className="text-sm opacity-60">{p.english}</p>
               </li>

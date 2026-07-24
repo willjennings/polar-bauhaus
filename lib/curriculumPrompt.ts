@@ -6,10 +6,12 @@
  */
 import { acquiredUnits, getUnit } from "./curriculum";
 
+export type ErrorFocusItem = { patternTag: string; example?: string };
+
 export interface CurriculumContext {
   mode: "target" | "free" | "review";
   currentUnit: string;
-  errorFocus: { patternTag: string; example?: string }[];
+  errorFocus: ErrorFocusItem[];
   reviewItems?: string[];
 }
 
